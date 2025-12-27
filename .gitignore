@@ -40,3 +40,9 @@ yarn-error.*
 /ios
 /android
 .env
+.env.local
+config.js
+node_modules/
+.expo/
+.env
+*.log

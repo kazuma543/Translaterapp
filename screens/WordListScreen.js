@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, FlatList, StyleSheet,Alert,Platform } from "react-native";
-
+import { BACKEND_URL } from '../config'; 
 
 export default function WordListScreen() {
   const [words, setWords] = useState([]);
   useEffect(() => {
-    fetch("http://172.21.169.73:5000/words")
+    fetch(`${BACKEND_URL}/words`)
       .then(res => res.json())
       .then(data => setWords(data));
   }, []);
@@ -110,7 +110,7 @@ export default function WordListScreen() {
   };
 
   const deleteItem= (id) => {
-    fetch('http://172.21.169.73:5000/delete_word',{
+    fetch('${BACKEND_URL/delete_word',{
       method: 'POST',
       headers: {
         "Content-Type":"application/json"

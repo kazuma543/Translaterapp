@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import { BACKEND_URL } from '../config'; 
 
 export default function TranslateScreen() {
   const [inputText, setInputText] = useState('');
   const [translatedText, setTranslatedText] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const BACKEND_URL = "http://172.21.169.73:5000";
+  
 
   // 翻訳処理
   const handleTranslate = async () => {

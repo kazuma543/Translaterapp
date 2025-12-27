@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from "react-native";
 import { PanGestureHandler } from "react-native-gesture-handler";
+import { BACKEND_URL } from '../config';
 
 export default function FlashCardScreen() {
   const [cards, setCards] = useState([]);
@@ -10,7 +11,7 @@ export default function FlashCardScreen() {
   const translateX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    fetch("http://172.21.169.73:5000/words")
+    fetch(`${BACKEND_URL}/words`)
       .then((res) => res.json())
       .then((data) => {
         const shuffled = data.sort(() => Math.random() - 0.5);
@@ -22,7 +23,7 @@ export default function FlashCardScreen() {
     const word = cards[currentIndex];
 
     // === DB 更新 ===
-    fetch("http://172.21.169.73:5000/update_known", {
+    fetch(`${BACKEND_URL}/update_known`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

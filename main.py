@@ -90,6 +90,7 @@ def translate_text(text, source=None, target=None):
 # API 1: POST /translate
 @app.route("/translate", methods=["POST","OPTIONS"])
 def api_translate():
+    print('a')
     if request.method == 'OPTIONS':
         return '', 200
     try:
