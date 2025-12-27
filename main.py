@@ -256,6 +256,7 @@ def flashcards_delete():
         conn.close()
     except sqlite3.Error as error:
         print(f"Falied to delete record from sqlite table:{error}")
+    return jsonify({"success": True, "message": "Deleted successfully"}), 200
         
     
 

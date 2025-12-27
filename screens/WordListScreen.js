@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, FlatList, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, StyleSheet,Alert,Platform } from "react-native";
 
 
 export default function WordListScreen() {
@@ -14,7 +14,7 @@ export default function WordListScreen() {
     let direction = 'asc';
 
     if (sortConfig.key === key && sortConfig.direction === 'asc'){
-      direction = ' desc';
+      direction = 'desc';
     }
     const sorted = [...words].sort((a,b) => {
       let aValue, bValue;
@@ -42,14 +42,14 @@ export default function WordListScreen() {
     setWords(sorted);
     setSortConfig({key, direction});
   }
-  
+
   const getSortIcon = (key) => {
     if (sortConfig.key !== key) return "⇅";
     
     return sortConfig.direction =='asc'
       ?  '↑' : '↓';
   };
-
+  
   const renderHeader = () => (
     <View style={styles.headerRow}>
       <TouchableOpacity
@@ -83,14 +83,66 @@ export default function WordListScreen() {
     // ひらがな、カタカナ、漢字のいずれかが含まれていれば日本語
     return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text);
   };
+  const deleteCard = (id) =>{
+    if (Platform.OS === 'web') {
+      // Web の場合は confirm を使用
+      if (window.confirm('このカードを削除しますか？')) {
+        deleteItem(id);
+      }
+    } else {
+      // iOS/Android の場合は Alert を使用
+      Alert.alert(
+        '削除確認',
+        'このカードを削除しますか？',
+        [
+          {
+            text: 'キャンセル',
+            style: 'cancel'
+          },
+          {
+            text: '削除',
+            onPress: () => deleteItem(id),
+            style: 'destructive'
+          }
+        ]
+      );
+    }
+  };
+
+  const deleteItem= (id) => {
+    fetch('http://172.21.169.73:5000/delete_word',{
+      method: 'POST',
+      headers: {
+        "Content-Type":"application/json"
+      },
+      body: JSON.stringify({id:id})
+    })  
+      .then(res => res.json())
+      
+    .then(() => {
+      setWords(prevWords => prevWords.filter(w => w.id !== id));
+    })
+    .catch(err => {
+      console.error('Error deleting word:', err);
+      Alert.alert('エラー', '削除に失敗しました');
+    });
+  };
 
   const renderItem = ({ item }) => {
     const isSourceJapanese = isJapanese(item.source_text);
     const englishText = isSourceJapanese ? item.translated_text : item.source_text;
     const japaneseText = isSourceJapanese ? item.source_text : item.translated_text;
-    return(
+    
+  return(
+
+      <TouchableOpacity
+        key={item.id}
+        onLongPress={() => deleteCard(item.id)}
+        style={{padding:15, borderBottomWidth:1, borderColor: '#ccc'}}
+      >
+
     <View style={styles.row}>
-      <View stsyle={styles.cell}>
+      <View style={styles.cell}>
         <Text style={styles.cellText}>{item.id}</Text>
       </View>
       <View style={styles.cell}>
@@ -104,10 +156,14 @@ export default function WordListScreen() {
       </View>
 
     </View>
+    </TouchableOpacity>
     );
+  
   };
 
-    const getSortLabel = () => {
+
+
+  const getSortLabel = () => {
     if (!sortConfig.key) return 'Original';
     
     let label = '';
@@ -119,10 +175,6 @@ export default function WordListScreen() {
     const direction = sortConfig.direction === 'asc' ? 'Up' : 'Down';
     return `${label} (${direction})`;
   };
-
-
-
-
   return (
     <View style={{flex:1, padding:20, backgroundColor:"#90c5dcff",  }}>
       {renderHeader()}
@@ -142,6 +194,8 @@ export default function WordListScreen() {
       </View>
     </View>
   );
+
+  
 }
 
 
