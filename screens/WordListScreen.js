@@ -256,7 +256,7 @@ export default function WordListScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add New Word</Text>
-              <TouchableOpacity onPress={() => setModalVisibel(false)}>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Text style={styles.closeButton}>✕</Text>
               </TouchableOpacity>
             </View>
