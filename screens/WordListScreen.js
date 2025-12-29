@@ -1,14 +1,26 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, FlatList, StyleSheet,Alert,Platform } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, StyleSheet,Alert,Platform,RefreshControl,Modal,TextInput,KeyboardAvoidingView } from "react-native";
 import { BACKEND_URL } from '../config'; 
 
 export default function WordListScreen() {
   const [words, setWords] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newWord, setNewWord] = useState({
+    sousrce_text: '',
+    translated_text: ''
+  });
   useEffect(() => {
     fetch(`${BACKEND_URL}/words`)
       .then(res => res.json())
       .then(data => setWords(data));
   }, []);
+
+  const onRefreshing = async ()=>{
+    setRefreshing(true);
+    await fetchWords();
+    setRefreshing(false);
+  }
   const [sortConfig, setSortConfig] = useState({key: null, direction: null});
   const sortBy = (key) => {
     let direction = 'asc';
@@ -110,7 +122,7 @@ export default function WordListScreen() {
   };
 
   const deleteItem= (id) => {
-    fetch('${BACKEND_URL/delete_word',{
+    fetch(`${BACKEND_URL}/delete_word`,{
       method: 'POST',
       headers: {
         "Content-Type":"application/json"
@@ -175,25 +187,109 @@ export default function WordListScreen() {
     const direction = sortConfig.direction === 'asc' ? 'Up' : 'Down';
     return `${label} (${direction})`;
   };
+
+  const handleAddWord = async () =>{
+    if (!newWord.source_text.trim() || !newWord.translated_text.trim()){
+      Alert.alert("Error!");
+      return;
+    }
+  try{
+    const response = await fetch(`${BACKEND_URL}/save_word`,{
+      method: 'POST',
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        source_text: newWord.source_text,
+        translated_text:newWord.translated_text,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.status === "success"){
+      Alert.alert("Success");
+      setModalVisible(false);
+      setNewWord({source_text:'', translated_text:''});
+      fetchWords();
+    }else{
+      Alert.alert('Error!');
+    }
+  } catch (error){
+    console.error("Error to save:", error);
+    Alert.alert("Error", "Fail to save");
+  }
+  };
+
   return (
     <View style={{flex:1, padding:20, backgroundColor:"#90c5dcff",  }}>
+      {/*+button*/}
       {renderHeader()}
-      
+      <View style={styles.header}>
+        <TouchableOpacity
+        style={styles.addButton}
+        onPress={()=> setModalVisible(true)}
+        >
+          <Text style={styles.addButtonText}>+</Text>
+        </TouchableOpacity>
+      </View>
       <FlatList
         data={words}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
       />
-      
       <View style={styles.info}>
         <Text style={styles.infoText}>
           <Text style={styles.infoBold}>Current order: </Text>
           <Text>{getSortLabel()}</Text>
         </Text>
       </View>
+      <Modal
+      animationType="slide"
+      transparent={true}
+      visible={modalVisible}
+      onRequestClose={() => setModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+        behavior = {Platform.OS === "ios" ? "padding" : "height"}
+        style = {styles.modalContainer}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add New Word</Text>
+              <TouchableOpacity onPress={() => setModalVisibel(false)}>
+                <Text style={styles.closeButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+            style = {styles.input}
+            placeholder="Original language"
+            value={newWord.source_text}
+            onChangeText={(text) =>
+              setNewWord({...newWord, source_text: text })
+            }
+            autoCapitalize="none"
+            />
+            <TextInput
+            style={styles.input}
+            placeholder="Translate"
+            value={newWord.translated_text}
+            onChangeText={(text) =>
+              setNewWord({...newWord, translated_text: text})
+            }
+            />
+
+            <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleAddWord}
+            >
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
+  
 
   
 }
@@ -216,6 +312,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#374151',
+  },
+  addButton:{
+    width:44,
+    height:44,
+    borderRadius: 22,
+    backgroundColor: '#0a7ea4',
+    justifyContent:'center',
+    alignItems:'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0 , height:2},
+    shadowOpacity:0.3,
+    shadowRadius:3,
+    elevation: 5,
+  },
+  addButtonText:{
+    color :'#fff',
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginTop:-2,
   },
   listContent: {
     paddingBottom: 20,
@@ -269,4 +384,52 @@ const styles = StyleSheet.create({
   infoBold: {
     fontWeight: '600',
   },
+  modalContainer:{
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor:'rgba(0,0,0,0.5)',
+  },
+  modalContent:{
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius:20,
+    padding: 20,
+    paddingBottom:40,
+  },
+  modalHeader:{
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle:{
+    fontSize:20,
+    fontWeight:'bold',
+  },
+  closeButton:{
+    fontSize: 28,
+    color: '#666'
+  },
+  input:{
+    borderWidth:1,
+    borderColor:'#ddd',
+    borderRadius:8,
+    padding:15,
+    fontSize:16,
+    marginBottom:15,
+    backgroundColor:'#fff'
+  },
+  saveButton:{
+    backgroundColor:'#0a7ea4',
+    padding:15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop:10,
+  },
+  saveButtonText:{
+    color:'#fff',
+    fontSize:16,
+    fontWeight:'bold',
+  }
+
 });
