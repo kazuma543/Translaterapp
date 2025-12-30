@@ -7,14 +7,23 @@ export default function WordListScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [newWord, setNewWord] = useState({
-    sousrce_text: '',
-    translated_text: ''
+    source_text: '',
+    translated_text: '',
+    phonetic: '',
+    example:''
   });
-  useEffect(() => {
-    fetch(`${BACKEND_URL}/words`)
-      .then(res => res.json())
-      .then(data => setWords(data));
-  }, []);
+  const fetchWords = async () => {
+  try {
+    const res = await fetch(`${BACKEND_URL}/words`);
+    const data = await res.json();
+    setWords(data);
+  } catch (error) {
+    console.error("Failed to fetch words:", error);
+  }
+};
+useEffect(() => {
+  fetchWords();  // ← これだけで良い
+}, []);
 
   const onRefreshing = async ()=>{
     setRefreshing(true);
@@ -77,6 +86,11 @@ export default function WordListScreen() {
         <Text style = {styles.headerText}>English{getSortIcon('english')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
+      style={styles.headerCell}
+      >
+        <Text style = {styles.headerText}>Phonetic</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         style={styles.headerCell}
         onPress={()=> sortBy('japanese')}
       >
@@ -95,24 +109,26 @@ export default function WordListScreen() {
     // ひらがな、カタカナ、漢字のいずれかが含まれていれば日本語
     return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text);
   };
+
+  /**Delete item */
   const deleteCard = (id) =>{
     if (Platform.OS === 'web') {
       // Web の場合は confirm を使用
-      if (window.confirm('このカードを削除しますか？')) {
+      if (window.confirm('Delete this card?')) {
         deleteItem(id);
       }
     } else {
       // iOS/Android の場合は Alert を使用
       Alert.alert(
-        '削除確認',
-        'このカードを削除しますか？',
+        'Confirm',
+        'Do you want to delete this card?',
         [
           {
-            text: 'キャンセル',
+            text: 'Cancel',
             style: 'cancel'
           },
           {
-            text: '削除',
+            text: 'Delete',
             onPress: () => deleteItem(id),
             style: 'destructive'
           }
@@ -136,15 +152,16 @@ export default function WordListScreen() {
     })
     .catch(err => {
       console.error('Error deleting word:', err);
-      Alert.alert('エラー', '削除に失敗しました');
+      Alert.alert('error', 'Fail to delete');
     });
   };
-
+/** sort items */
   const renderItem = ({ item }) => {
     const isSourceJapanese = isJapanese(item.source_text);
     const englishText = isSourceJapanese ? item.translated_text : item.source_text;
     const japaneseText = isSourceJapanese ? item.source_text : item.translated_text;
-    
+    const phonetic = item.phonetic ||'';
+    const example = item.example ||''
   return(
 
       <TouchableOpacity
@@ -160,20 +177,23 @@ export default function WordListScreen() {
       <View style={styles.cell}>
         <Text style={styles.cellText}>{englishText}</Text>
       </View>
+            <View style={styles.cell}>
+        <Text style={styles.cellText}>{phonetic}</Text>
+      </View>
       <View style={styles.cell}>
         <Text style={styles.cellText}>{japaneseText}</Text>
       </View>
       <View style={styles.cell}>
         <Text style={styles.cellText}>{item.known ? '✓' : '✗'}</Text>
       </View>
-
+    </View>
+    <View style={styles.cell}>
+        <Text style={styles.cellText}>{example}</Text>
     </View>
     </TouchableOpacity>
     );
   
   };
-
-
 
   const getSortLabel = () => {
     if (!sortConfig.key) return 'Original';
@@ -188,6 +208,7 @@ export default function WordListScreen() {
     return `${label} (${direction})`;
   };
 
+  /**Add word from wordlistscreen with puressing+button */
   const handleAddWord = async () =>{
     if (!newWord.source_text.trim() || !newWord.translated_text.trim()){
       Alert.alert("Error!");
@@ -200,6 +221,8 @@ export default function WordListScreen() {
       body: JSON.stringify({
         source_text: newWord.source_text,
         translated_text:newWord.translated_text,
+        phonetic:newWord.phonetic,
+        example:newWord.example
       }),
     });
 
@@ -208,7 +231,7 @@ export default function WordListScreen() {
     if (data.status === "success"){
       Alert.alert("Success");
       setModalVisible(false);
-      setNewWord({source_text:'', translated_text:''});
+      setNewWord({source_text:'', translated_text:'',phonetic:'',example:''});
       fetchWords();
     }else{
       Alert.alert('Error!');
@@ -277,7 +300,22 @@ export default function WordListScreen() {
               setNewWord({...newWord, translated_text: text})
             }
             />
-
+            <TextInput
+            style ={styles.input}
+            placeholder="Phonetic"
+            value={newWord.phonetic}
+            onChangeText={(text) =>
+              setNewWord({...newWord, phonetic: text})
+            }
+            />
+            <TextInput
+            style = {styles.input}
+            placeholder="Example"
+            value={newWord.example}
+            onChangeText={(text) =>
+              setNewWord({...newWord, example: text})
+            }
+            />
             <TouchableOpacity
             style={styles.saveButton}
             onPress={handleAddWord}
@@ -299,12 +337,12 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     backgroundColor: '#1a7adbff',
-    borderRadius: 8,
+    borderRadius: 6,
     marginBottom: 12,
   },
   headerCell: {
-    padding:8,
-    margin: 8,
+    padding:4,
+    margin: 2,
     alignItems: 'stretch',
   },
   headerText: {
@@ -348,23 +386,23 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   cell: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 1,
   },
   cellText: {
-    margin:8,
-    padding:8,
+    margin:1,
+    padding:4,
     fontSize: 14,
     color: '#1F2937',
   },
   translatedRow: {
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    paddingTop: 8,
+    paddingTop: 4,
   },
   translated: {
     fontSize: 14,

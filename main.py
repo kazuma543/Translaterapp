@@ -30,6 +30,8 @@ def init_db():
                 translated_text TEXT,
                 source_lang TEXT,
                 target_lang TEXT,
+                phonetic TEXT,
+                example TEXT,
                 known INTEGER DEFAULT 0
             )
         """)
@@ -121,12 +123,16 @@ def save_word():
         translated_text = data.get('translated_text', '')
         source_lang = data.get('source_lang','')
         target_lang = data.get('target_lang','')
+        phonetic = data.get('phonetic','')
+        example = data.get('example','')
         known = 0
         
         print(f"source_text: '{source_text}'")
         print(f"translated_text: '{translated_text}'")
         print(f"source_lang: '{source_lang}'")
         print(f"target_lang: '{target_lang}'")
+        print(f"phonetic:'{phonetic}'")
+        print(f"example:'{example}'")
         print(f"known:'{known}'")
 
 
@@ -147,15 +153,17 @@ def save_word():
                 translated_text TEXT NOT NULL,
                 source_lang TEXT,
                 target_lang TEXT,
+                phonetic TEXT,
+                example TEXT,
                 known INTEGER DEFAULT 0
             )
         ''')
         
         print("データ挿入中...")
         cursor.execute('''
-            INSERT INTO words (source_text, translated_text, source_lang, target_lang, known)
-        VALUES (?, ?, ?, ?,?)
-        ''', (source_text, translated_text,source_lang,target_lang,known))
+            INSERT INTO words (source_text, translated_text, source_lang, target_lang, phonetic, example, known)
+        VALUES (?, ?, ?, ?,?,?,?)
+        ''', (source_text, translated_text,source_lang,target_lang,phonetic,example,known))
         
         conn.commit()
         word_id = cursor.lastrowid
@@ -197,7 +205,7 @@ def get_words():
         "source_text": row[1],
         "translated_text": row[2],
         "source_lang": row[3],
-        "target_lang": row[4]
+        "target_lang": row[4],
     } for row in rows]
 
     return jsonify(words)
@@ -211,7 +219,7 @@ def get_random_word():
         SELECT id, source_text, tranlated_text, know 
         FROM words 
         ORDER BY 
-            CASE WHEN known = '0' THEN 0 ELES 1 END, 
+            CASE WHEN known = 0 THEN 0 ELES 1 END, 
             RAND() 
     LIMIT 1""")
     row = c.fetchone()
