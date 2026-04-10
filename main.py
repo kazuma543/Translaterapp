@@ -40,6 +40,7 @@ def init_db():
 
 init_db()
 
+# 
 # Utility: Detect language
 def detect_language(text):
     url = f"{ENDPOINT}/detect?api-version=3.0"
@@ -54,7 +55,7 @@ def detect_language(text):
     data = response.json()
     return data[0]["language"]
 
-# Utility: Translate (最新版)
+# Utility: Translate (Latest)
 def translate_text(text, source=None, target=None):
     # 
     if not source:
@@ -99,9 +100,8 @@ def api_translate():
         data = request.json
 
         text = data.get("text")
-        source = data.get("source")  # 任意
-        target = data.get("target")  # 任意
-
+        source = data.get("source")  
+        target = data.get("target")  
         if not text:
          return jsonify({"error": "text is required"}), 400
 
@@ -109,7 +109,7 @@ def api_translate():
 
         return jsonify(result)
     except Exception as e:
-        print(f"エラー発生: {str(e)}")  # ← エラーログ
+        print(f"Error: {str(e)}")  
         return jsonify({'error': str(e)}), 500
 # API 2: POST /save_word
 @app.route('/save_word', methods=['POST'])
@@ -117,7 +117,7 @@ def save_word():
     try:
         print("=== save_word called ===")
         data = request.json
-        print(f"受信データ: {data}")
+        print(f"Recieve data: {data}")
         
         source_text = data.get('source_text', '')
         translated_text = data.get('translated_text', '')
@@ -138,14 +138,14 @@ def save_word():
 
         
         if not source_text or not translated_text:
-            print("エラー: テキストが空です")
-            return jsonify({'status': 'error', 'message': 'テキストが空です'}), 400
+            print("Error: Text box is empty")
+            return jsonify({'status': 'error', 'message': 'Text box is empty'}), 400
         
-        print("データベース接続開始...")
+        print("Strating connect to database...")
         conn = sqlite3.connect('words.db')
         cursor = conn.cursor()
         
-        print("テーブル作成/確認...")
+        print("Create Table/Check...")
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS words (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -159,7 +159,7 @@ def save_word():
             )
         ''')
         
-        print("データ挿入中...")
+        print("Insserting data...")
         cursor.execute('''
             INSERT INTO words (source_text, translated_text, source_lang, target_lang, phonetic, example, known)
         VALUES (?, ?, ?, ?,?,?,?)
@@ -169,20 +169,20 @@ def save_word():
         word_id = cursor.lastrowid
         conn.close()
         
-        print(f"保存成功 ID: {word_id}")
+        print(f"Success ID: {word_id}")
         
         response_data = {
             'status': 'success',
-            'message': '保存しました',
+            'message': 'Saved',
             'id': word_id
         }
-        print(f"返すデータ: {response_data}")
+        print(f"Return data: {response_data}")
         
         return jsonify(response_data), 200
         
     except Exception as e:
-        print(f"例外エラー: {str(e)}")
-        print(f"エラータイプ: {type(e).__name__}")
+        print(f"Exception data: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
         import traceback
         traceback.print_exc()
         return jsonify({
@@ -196,7 +196,7 @@ def save_word():
 def get_words():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("SELECT id, source_text, translated_text, source_lang, target_lang FROM words")
+    c.execute("SELECT id, source_text, translated_text, source_lang, target_lang,phonetic,example,known FROM words")
     rows = c.fetchall()
     conn.close()
 
@@ -206,6 +206,9 @@ def get_words():
         "translated_text": row[2],
         "source_lang": row[3],
         "target_lang": row[4],
+        "phonetic":row[5],
+        "example":row[6],
+        "known":row[7],
     } for row in rows]
 
     return jsonify(words)

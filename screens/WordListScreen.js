@@ -22,7 +22,7 @@ export default function WordListScreen() {
   }
 };
 useEffect(() => {
-  fetchWords();  // ← これだけで良い
+  fetchWords(); 
 }, []);
 
   const onRefreshing = async ()=>{
