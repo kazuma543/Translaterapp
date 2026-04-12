@@ -1,12 +1,25 @@
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import FlashCardScreen  from "./screens/FlashCardScreen";
+import FlashCardStudy   from "./screens/FlashCardStudy";
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import TranslateScreen from './screens/TranslateScreen';
 import WordListScreen from './screens/WordListScreen';
-import FlashCardScreen from './screens/FlashCardScreen';
 import { StyleSheet } from 'react-native';
 
+
+const FlashStack = createNativeStackNavigator();
+
+function FlashCardStack() {
+  return (
+    <FlashStack.Navigator screenOptions={{ headerShown: false }}>
+      <FlashStack.Screen name="FlashCardHome"  component={FlashCardScreen} />
+      <FlashStack.Screen name="FlashCardStudy" component={FlashCardStudy} />
+    </FlashStack.Navigator>
+  );
+}
 
 
 
@@ -39,8 +52,7 @@ export default function App() {
           />
           <Tab.Screen
           name="FlashCard"
-          component={FlashCardScreen}
-          option={{ title: 'FlashCard'}}
+          component={FlashCardStack}
           />
         </Tab.Navigator>
         </NavigationContainer>

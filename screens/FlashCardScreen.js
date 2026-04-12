@@ -1,103 +1,141 @@
-import React, { useEffect, useState, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from "react-native";
-import { PanGestureHandler } from "react-native-gesture-handler";
-import { BACKEND_URL } from '../config';
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  View, Text, StyleSheet, TouchableOpacity,
+  FlatList, ActivityIndicator, Alert
+} from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { BACKEND_URL } from "../config";
 
-export default function FlashCardScreen() {
-  const [cards, setCards] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false);
+const FOLDER_COLORS = {
+  blue:  { bg: "#e3f2fd", icon: "#bbdefb", text: "#1565c0" },
+  green: { bg: "#e8f5e9", icon: "#c8e6c9", text: "#2e7d32" },
+  amber: { bg: "#fff8e1", icon: "#ffe082", text: "#f57f17" },
+};
 
-  const translateX = useRef(new Animated.Value(0)).current;
+export default function FlashCardScreen({ navigation }) {
+  const [folders, setFolders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch(`${BACKEND_URL}/words`)
-      .then((res) => res.json())
-      .then((data) => {
-        const shuffled = data.sort(() => Math.random() - 0.5);
-        setCards(shuffled);
-      });
-  }, []);
-
-  const handleSwipe = (direction) => {
-    const word = cards[currentIndex];
-
-    // === DB 更新 ===
-    fetch(`${BACKEND_URL}/update_known`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: word.id,
-        known: direction === "right" ? 1 : 0,
-      }),
-    });
-
-    // 次のカードへ
-    setShowAnswer(false);
-    setCurrentIndex((prev) => prev + 1);
-  };
-
-  const onGestureEvent = Animated.event(
-    [{ nativeEvent: { translationX: translateX } }],
-    { useNativeDriver: false }
-  );
-
-  const onHandlerStateChange = (event) => {
-    if (event.nativeEvent.state === 5) {
-      const { translationX } = event.nativeEvent;
-
-      if (translationX > 100) handleSwipe("right"); // 右 → 覚えた
-      else if (translationX < -100) handleSwipe("left"); // 左 → まだ
-
-      Animated.spring(translateX, {
-        toValue: 0,
-        useNativeDriver: false,
-      }).start();
+  const fetchFolders = async () => {
+    try {
+      const res  = await fetch(`${BACKEND_URL}/folders`);
+      const data = await res.json();
+      setFolders(data);
+    } catch (e) {
+      Alert.alert("Error", "Could not load folders.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (currentIndex >= cards.length) {
+  // Refresh every time the tab is focused
+  useFocusEffect(useCallback(() => { fetchFolders(); }, []));
+
+  const handleCreateFolder = () => {
+    Alert.prompt(
+      "New Folder",
+      "Enter a folder name:",
+      async (name) => {
+        if (!name?.trim()) return;
+        await fetch(`${BACKEND_URL}/create_folder`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ name: name.trim(), color: "blue" }),
+        });
+        fetchFolders();
+      }
+    );
+  };
+
+  const handleDeleteFolder = (folder) => {
+    Alert.alert(
+      "Delete Folder",
+      `Delete "${folder.name}"? Words inside will not be deleted.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete", style: "destructive",
+          onPress: async () => {
+            await fetch(`${BACKEND_URL}/delete_folder`, {
+              method:  "POST",
+              headers: { "Content-Type": "application/json" },
+              body:    JSON.stringify({ id: folder.id }),
+            });
+            fetchFolders();
+          },
+        },
+      ]
+    );
+  };
+
+  const renderFolder = ({ item }) => {
+    const color = FOLDER_COLORS[item.color] ?? FOLDER_COLORS.blue;
+    return (
+      <TouchableOpacity
+        style={[styles.folderCard, { backgroundColor: color.bg }]}
+        onPress={() => navigation.navigate("FlashCardStudy", { folder: item })}
+        onLongPress={() => handleDeleteFolder(item)}
+        activeOpacity={0.75}
+      >
+        <View style={[styles.folderIcon, { backgroundColor: color.icon }]} />
+        <View style={styles.folderInfo}>
+          <Text style={[styles.folderName, { color: color.text }]}>{item.name}</Text>
+          <Text style={styles.folderCount}>{item.word_count} words</Text>
+        </View>
+        <Text style={styles.arrow}>›</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  if (loading) {
     return (
       <View style={styles.center}>
-        <Text style={{ fontSize: 24 }}>Finish All Cards!</Text>
+        <ActivityIndicator size="large" color="#2196f3" />
       </View>
     );
   }
 
-  const card = cards[currentIndex];
-
   return (
-    <View style={{flex:1, justifyContent: "center", padding:40, backgroundColor:"#90c5dcff"}}>
-      <PanGestureHandler
-        onGestureEvent={onGestureEvent}
-        onHandlerStateChange={onHandlerStateChange}
-      >
-        <Animated.View style={[styles.card, { transform: [{ translateX }] }]}>
-          <TouchableOpacity onPress={() => setShowAnswer(!showAnswer)}>
-            <Text style={styles.text}>
-              {showAnswer ? card.translated_text : card.source_text}
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </PanGestureHandler>
+    <View style={styles.container}>
+      <Text style={styles.title}>Select a folder</Text>
 
-      <Text style={styles.hint}>Tap:Answer / Right:Memorised / Left:Not yet</Text>
+      <FlatList
+        data={folders}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={renderFolder}
+        contentContainerStyle={{ gap: 10 }}
+        ListEmptyComponent={
+          <Text style={styles.empty}>No folders yet. Create one below!</Text>
+        }
+      />
+
+      <TouchableOpacity style={styles.newFolderBtn} onPress={handleCreateFolder}>
+        <Text style={styles.newFolderText}>+ New Folder</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20 },
-  card: {
-    backgroundColor: "#fff",
-    padding: 40,
+  container:    { flex: 1, backgroundColor: "#90c5dc", padding: 20, paddingTop: 30 },
+  center:       { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#90c5dc" },
+  title:        { fontSize: 22, fontWeight: "bold", color: "#1a1a1a", marginBottom: 16 },
+  folderCard:   { flexDirection: "row", alignItems: "center", borderRadius: 12, padding: 14, gap: 12 },
+  folderIcon:   { width: 36, height: 28, borderRadius: 4 },
+  folderInfo:   { flex: 1 },
+  folderName:   { fontSize: 16, fontWeight: "600" },
+  folderCount:  { fontSize: 12, color: "#666", marginTop: 2 },
+  arrow:        { fontSize: 20, color: "#aaa" },
+  empty:        { textAlign: "center", color: "#555", marginTop: 40 },
+  newFolderBtn: {
+    marginTop: 16,
     borderRadius: 10,
-    borderWidth:1,
-    borderColor: "#060606ff",
-    elevation: 4,
+    borderWidth: 1.5,
+    borderColor: "#2196f3",
+    borderStyle: "dashed",
+    padding: 14,
     alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.4)",
   },
-  text: { color:"#2480a4ff",fontSize: 26, fontWeight: "bold" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  hint: { marginTop: 30, textAlign: "center", color: "#555" },
+  newFolderText: { color: "#2196f3", fontSize: 15, fontWeight: "600" },
 });

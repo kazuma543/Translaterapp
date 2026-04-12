@@ -21,22 +21,42 @@ CORS(app)
 DB_NAME = "words.db"
 
 def init_db():
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS words(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                source_text TEXT,
-                translated_text TEXT,
-                source_lang TEXT,
-                target_lang TEXT,
-                phonetic TEXT,
-                example TEXT,
-                known INTEGER DEFAULT 0
-            )
-        """)
-        conn.commit()
-        conn.close()
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS folders (
+            id    INTEGER PRIMARY KEY AUTOINCREMENT,
+            name  TEXT NOT NULL,
+            color TEXT DEFAULT 'blue'
+        )
+    """)
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS words (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_text     TEXT,
+            translated_text TEXT,
+            source_lang     TEXT,
+            target_lang     TEXT,
+            phonetic        TEXT,
+            example         TEXT,
+            known           INTEGER DEFAULT 0,
+            folder_id       INTEGER REFERENCES folders(id) ON DELETE SET NULL
+        )
+    """)
+
+    # Seed default folders if none exist
+    c.execute("SELECT COUNT(*) FROM folders")
+    if c.fetchone()[0] == 0:
+        c.executemany("INSERT INTO folders (name, color) VALUES (?, ?)", [
+            ('Daily vocab', 'blue'),
+            ('Business',    'green'),
+            ('JLPT N2',     'amber'),
+        ])
+
+    conn.commit()
+    conn.close()
 
 init_db()
 
@@ -115,80 +135,33 @@ def api_translate():
 @app.route('/save_word', methods=['POST'])
 def save_word():
     try:
-        print("=== save_word called ===")
-        data = request.json
-        print(f"Recieve data: {data}")
-        
-        source_text = data.get('source_text', '')
+        data            = request.json
+        source_text     = data.get('source_text', '')
         translated_text = data.get('translated_text', '')
-        source_lang = data.get('source_lang','')
-        target_lang = data.get('target_lang','')
-        phonetic = data.get('phonetic','')
-        example = data.get('example','')
-        known = 0
-        
-        print(f"source_text: '{source_text}'")
-        print(f"translated_text: '{translated_text}'")
-        print(f"source_lang: '{source_lang}'")
-        print(f"target_lang: '{target_lang}'")
-        print(f"phonetic:'{phonetic}'")
-        print(f"example:'{example}'")
-        print(f"known:'{known}'")
+        source_lang     = data.get('source_lang', '')
+        target_lang     = data.get('target_lang', '')
+        phonetic        = data.get('phonetic', '')
+        example         = data.get('example', '')
+        folder_id       = data.get('folder_id', None)  # NEW
+        known           = 0
 
-
-        
         if not source_text or not translated_text:
-            print("Error: Text box is empty")
-            return jsonify({'status': 'error', 'message': 'Text box is empty'}), 400
-        
-        print("Strating connect to database...")
-        conn = sqlite3.connect('words.db')
-        cursor = conn.cursor()
-        
-        print("Create Table/Check...")
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS words (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                source_text TEXT NOT NULL,
-                translated_text TEXT NOT NULL,
-                source_lang TEXT,
-                target_lang TEXT,
-                phonetic TEXT,
-                example TEXT,
-                known INTEGER DEFAULT 0
-            )
-        ''')
-        
-        print("Insserting data...")
-        cursor.execute('''
-            INSERT INTO words (source_text, translated_text, source_lang, target_lang, phonetic, example, known)
-        VALUES (?, ?, ?, ?,?,?,?)
-        ''', (source_text, translated_text,source_lang,target_lang,phonetic,example,known))
-        
+            return jsonify({'status': 'error', 'message': 'Text is required'}), 400
+
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO words
+              (source_text, translated_text, source_lang, target_lang, phonetic, example, known, folder_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (source_text, translated_text, source_lang, target_lang, phonetic, example, known, folder_id))
         conn.commit()
-        word_id = cursor.lastrowid
+        word_id = c.lastrowid
         conn.close()
-        
-        print(f"Success ID: {word_id}")
-        
-        response_data = {
-            'status': 'success',
-            'message': 'Saved',
-            'id': word_id
-        }
-        print(f"Return data: {response_data}")
-        
-        return jsonify(response_data), 200
-        
+
+        return jsonify({"status": "success", "id": word_id}), 200
     except Exception as e:
-        print(f"Exception data: {str(e)}")
-        print(f"Error type: {type(e).__name__}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 # 重要: この関数の後に何もない(インデントが正しい)ことを確認
 # API 3: GET /words
@@ -196,22 +169,22 @@ def save_word():
 def get_words():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("SELECT id, source_text, translated_text, source_lang, target_lang,phonetic,example,known FROM words")
+    c.execute("""
+        SELECT w.id, w.source_text, w.translated_text, w.source_lang, w.target_lang, w.folder_id, f.name
+        FROM words w
+        LEFT JOIN folders f ON f.id = w.folder_id
+    """)
     rows = c.fetchall()
     conn.close()
-
-    words = [{
-        "id": row[0],
-        "source_text": row[1],
+    return jsonify([{
+        "id":              row[0],
+        "source_text":     row[1],
         "translated_text": row[2],
-        "source_lang": row[3],
-        "target_lang": row[4],
-        "phonetic":row[5],
-        "example":row[6],
-        "known":row[7],
-    } for row in rows]
-
-    return jsonify(words)
+        "source_lang":     row[3],
+        "target_lang":     row[4],
+        "folder_id":       row[5],
+        "folder_name":     row[6]
+    } for row in rows])
 
 #Random words API
 @app.route("/word_random", methods=["GET"])
@@ -270,7 +243,135 @@ def flashcards_delete():
         print(f"Falied to delete record from sqlite table:{error}")
     return jsonify({"success": True, "message": "Deleted successfully"}), 200
         
-    
+# GET /folders — fetch all folders with word count
+@app.route("/folders", methods=["GET"])
+def get_folders():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("""
+        SELECT f.id, f.name, f.color, COUNT(w.id) as word_count
+        FROM folders f
+        LEFT JOIN words w ON w.folder_id = f.id
+        GROUP BY f.id
+    """)
+    rows = c.fetchall()
+    conn.close()
+    return jsonify([{
+        "id":         row[0],
+        "name":       row[1],
+        "color":      row[2],
+        "word_count": row[3]
+    } for row in rows])
+
+
+# POST /create_folder — create a new folder
+@app.route("/create_folder", methods=["POST"])
+def create_folder():
+    try:
+        data  = request.json
+        name  = data.get("name", "").strip()
+        color = data.get("color", "blue")
+
+        if not name:
+            return jsonify({"status": "error", "message": "Folder name is required"}), 400
+
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("INSERT INTO folders (name, color) VALUES (?, ?)", (name, color))
+        conn.commit()
+        folder_id = c.lastrowid
+        conn.close()
+
+        return jsonify({"status": "success", "id": folder_id, "name": name, "color": color})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# POST /delete_folder — delete a folder (words become unassigned)
+@app.route("/delete_folder", methods=["POST"])
+def delete_folder():
+    try:
+        data      = request.json
+        folder_id = data.get("id")
+
+        if not folder_id:
+            return jsonify({"status": "error", "message": "Folder id is required"}), 400
+
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        # Unassign words first
+        c.execute("UPDATE words SET folder_id = NULL WHERE folder_id = ?", (folder_id,))
+        c.execute("DELETE FROM folders WHERE id = ?", (folder_id,))
+        conn.commit()
+        conn.close()
+
+        return jsonify({"status": "success", "message": "Folder deleted"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# POST /rename_folder — rename an existing folder
+@app.route("/rename_folder", methods=["POST"])
+def rename_folder():
+    try:
+        data      = request.json
+        folder_id = data.get("id")
+        new_name  = data.get("name", "").strip()
+
+        if not folder_id or not new_name:
+            return jsonify({"status": "error", "message": "id and name are required"}), 400
+
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("UPDATE folders SET name = ? WHERE id = ?", (new_name, folder_id))
+        conn.commit()
+        conn.close()
+
+        return jsonify({"status": "success", "message": "Folder renamed"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# GET /words_in_folder/<folder_id> — fetch words for a specific folder
+@app.route("/words_in_folder/<int:folder_id>", methods=["GET"])
+def words_in_folder(folder_id):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, source_text, translated_text, source_lang, target_lang, phonetic, known
+        FROM words
+        WHERE folder_id = ?
+    """, (folder_id,))
+    rows = c.fetchall()
+    conn.close()
+    return jsonify([{
+        "id":             row[0],
+        "source_text":    row[1],
+        "translated_text":row[2],
+        "source_lang":    row[3],
+        "target_lang":    row[4],
+        "phonetic":       row[5],
+        "known":          row[6]
+    } for row in rows])
+
+
+# POST /move_word — move a word to a different folder
+@app.route("/move_word", methods=["POST"])
+def move_word():
+    try:
+        data      = request.json
+        word_id   = data.get("word_id")
+        folder_id = data.get("folder_id")  # pass null to unassign
+
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("UPDATE words SET folder_id = ? WHERE id = ?", (folder_id, word_id))
+        conn.commit()
+        conn.close()
+
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 if __name__ == "__main__":
