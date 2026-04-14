@@ -170,21 +170,18 @@ def get_words():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("""
-        SELECT w.id, w.source_text, w.translated_text, w.source_lang, w.target_lang, w.folder_id, f.name
+        SELECT w.id, w.source_text, w.translated_text, w.source_lang, w.target_lang, w.phonetic, w.example, w.folder_id, f.name as folder_name
         FROM words w
         LEFT JOIN folders f ON f.id = w.folder_id
     """)
+
+    columns = [col[0] for col in c.description]
     rows = c.fetchall()
-    conn.close()
-    return jsonify([{
-        "id":              row[0],
-        "source_text":     row[1],
-        "translated_text": row[2],
-        "source_lang":     row[3],
-        "target_lang":     row[4],
-        "folder_id":       row[5],
-        "folder_name":     row[6]
-    } for row in rows])
+
+    result = []
+    for row in rows:
+        result.append(dict(zip(columns, row)))
+    return jsonify(result)
 
 #Random words API
 @app.route("/word_random", methods=["GET"])
@@ -338,7 +335,7 @@ def words_in_folder(folder_id):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("""
-        SELECT id, source_text, translated_text, source_lang, target_lang, phonetic, known
+        SELECT id, source_text, translated_text, source_lang, target_lang, phonetic, example, known
         FROM words
         WHERE folder_id = ?
     """, (folder_id,))
@@ -351,7 +348,8 @@ def words_in_folder(folder_id):
         "source_lang":    row[3],
         "target_lang":    row[4],
         "phonetic":       row[5],
-        "known":          row[6]
+        "example":        row[6],
+        "known":          row[7]
     } for row in rows])
 
 

@@ -256,9 +256,12 @@ export default function WordListScreen() {
                 <Text style={styles.exampleText}>{activeWord.example}</Text>
               </View>
             ) : null}
+
             {activeWord?.folder_name? (
-              <Text style={styles.tagButtonText}>
-                {activeWord?.folder_name || "No Folder"}
+              <Text style={styles.folderBox}>
+                <Text style={styles.tagButtonText}>
+                  {activeWord?.folder_name || "No Folder"}
+                </Text>
               </Text>
             ) : null}
           </View>
@@ -346,7 +349,7 @@ const styles = StyleSheet.create({
     borderRadius: 6, 
     marginBottom: 12 
   },
-  
+
   headerCell: { 
     padding: 4, 
     margin: 2, 
@@ -549,7 +552,12 @@ const styles = StyleSheet.create({
     color: '#000', 
     textAlign: 'center' 
   },
-
+  folderBox:{
+    backgroundColor: '#fff', 
+    padding: 15, 
+    borderRadius: 8, 
+    alignItems: 'center' 
+  },
   tagButton: {
     backgroundColor: '#e3f2fd',
     borderRadius: 12,
