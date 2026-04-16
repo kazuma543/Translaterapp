@@ -27,30 +27,59 @@ export default function FlashCardStudy({ route, navigation }) {
       .finally(() => setLoading(false));
   }, [folder.id]);
 
-  const handleSwipe = (direction) => {
-    const word = cards[currentIndex];
-    fetch(`${BACKEND_URL}/update_known`, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ id: word.id, known: direction === "right" ? 1 : 0 }),
-    });
-    setShowAnswer(false);
-    setCurrentIndex((prev) => prev + 1);
-  };
-
-  const onGestureEvent = Animated.event(
+const onGestureEvent = Animated.event(
     [{ nativeEvent: { translationX: translateX } }],
     { useNativeDriver: false }
   );
+const handleSwipe = (direction) => {
+  // 1. 現在のカードを取得
+  const word = cards[currentIndex];
+  
+  // カードが存在しない場合は何もしない
+  if (!word) return;
 
-  const onHandlerStateChange = (event) => {
-    if (event.nativeEvent.state === 5) {
-      const { translationX } = event.nativeEvent;
-      if (translationX > 100)       handleSwipe("right");
-      else if (translationX < -100) handleSwipe("left");
-      Animated.spring(translateX, { toValue: 0, useNativeDriver: false }).start();
+  // 2. 方向に基づいてスコア(quality)を決定
+  // 右スワイプなら 4 (正解)、左スワイプなら 2 (不十分)
+  const qualityScore = (direction === "right") ? 4 : 2;
+
+  // 3. サーバーへ送信
+  fetch(`${BACKEND_URL}/review_word`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: word.id,          // ここを word.id に修正
+      quality: qualityScore // 計算したスコアを送信
+    }),
+  })
+  .then(res => res.json())
+  .then(data => {
+    console.log("Review saved:", data);
+  })
+  .catch(err => console.error("Error saving review:", err));
+
+  // 4. UIの状態を更新（次のカードへ）
+  setShowAnswer(false);
+  setCurrentIndex((prev) => prev + 1);
+};
+
+// ジェスチャー完了時の処理
+const onHandlerStateChange = (event) => {
+  if (event.nativeEvent.state === 5) { // 5 は State.END (ジェスチャー終了)
+    const { translationX } = event.nativeEvent;
+    
+    if (translationX > 100) {
+      handleSwipe("right");
+    } else if (translationX < -100) {
+      handleSwipe("left");
     }
-  };
+
+    // カードを中央に戻すアニメーション
+    Animated.spring(translateX, { 
+      toValue: 0, 
+      useNativeDriver: false 
+    }).start();
+  }
+};
 
   if (loading) {
     return (
@@ -122,16 +151,22 @@ export default function FlashCardStudy({ route, navigation }) {
 
       {/* Buttons */}
       <View style={styles.btnRow}>
-        <TouchableOpacity style={[styles.actionBtn, styles.btnNotYet]} onPress={() => handleSwipe("left")}>
-          <Text style={styles.btnNotYetText}>Not yet</Text>
+        <TouchableOpacity onPress={() => handleReview(1)}>
+          <Text>Again</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, styles.btnMemorised]} onPress={() => handleSwipe("right")}>
-          <Text style={styles.btnMemorisedText}>Memorised</Text>
+
+        <TouchableOpacity onPress={() => handleReview(3)}>
+          <Text>Good</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => handleReview(5)}>
+          <Text>Easy</Text>
         </TouchableOpacity>
       </View>
 
     </View>
   );
+  navigation.navigate("WordList", { refresh: true });
 }
 
 const styles = StyleSheet.create({
@@ -163,7 +198,7 @@ const styles = StyleSheet.create({
 
   hint:             { marginTop: 16, textAlign: "center", color: "#444", fontSize: 12 },
 
-  btnRow:           { flexDirection: "row", gap: 12, marginTop: 24 },
+  btnRow:           { flex: 1, borderRadius: 10, paddingVertical: 14, alignItems: "center", flexDirection: "row", gap: 12, marginTop: 24 },
   actionBtn:        { flex: 1, borderRadius: 10, paddingVertical: 14, alignItems: "center" },
   btnNotYet:        { backgroundColor: "#fde8e8" },
   btnNotYetText:    { color: "#c0392b", fontWeight: "600", fontSize: 15 },

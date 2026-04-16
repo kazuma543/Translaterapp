@@ -6,6 +6,7 @@ import uuid
 import os
 from dotenv import load_dotenv
 import random
+from datetime import datetime, timedelta
 load_dotenv()
 
 API_KEY = os.getenv("AZURE_API_KEY")
@@ -45,6 +46,21 @@ def init_db():
             folder_id       INTEGER REFERENCES folders(id) ON DELETE SET NULL
         )
     """)
+    try:
+        c.execute("ALTER TABLE words ADD COLUMN ease_factor REAL DEFAULT 2.5")
+    except: pass
+
+    try:
+        c.execute("ALTER TABLE words ADD COLUMN interval INTEGER DEFAULT 1")
+    except: pass
+
+    try:
+        c.execute("ALTER TABLE words ADD COLUMN repetition INTEGER DEFAULT 0")
+    except: pass
+
+    try:
+        c.execute("ALTER TABLE words ADD COLUMN next_review DATE")
+    except: pass
 
     # Seed default folders if none exist
     c.execute("SELECT COUNT(*) FROM folders")
@@ -170,7 +186,7 @@ def get_words():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("""
-        SELECT w.id, w.source_text, w.translated_text, w.source_lang, w.target_lang, w.phonetic, w.example, w.folder_id, f.name as folder_name
+        SELECT w.id, w.source_text, w.translated_text, w.source_lang, w.target_lang, w.phonetic, w.example, w.known, w.folder_id, f.name as folder_name
         FROM words w
         LEFT JOIN folders f ON f.id = w.folder_id
     """)
@@ -239,7 +255,34 @@ def flashcards_delete():
     except sqlite3.Error as error:
         print(f"Falied to delete record from sqlite table:{error}")
     return jsonify({"success": True, "message": "Deleted successfully"}), 200
-        
+
+@app.route("/update_word", methods=["POST"])
+def update_word():
+    try:
+        data = request.json
+        word_id         = data.get("id")
+        source_text     = data.get("source_text", "")
+        translated_text = data.get("translated_text", "")
+        phonetic        = data.get("phonetic", "")
+        example         = data.get("example", "")
+
+        if not word_id:
+            return jsonify({"status": "error", "message": "id is required"}), 400
+
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("""
+            UPDATE words
+            SET source_text=?, translated_text=?, phonetic=?, example=?
+            WHERE id=?
+        """, (source_text, translated_text, phonetic, example, word_id))
+        conn.commit()
+        conn.close()
+
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 # GET /folders — fetch all folders with word count
 @app.route("/folders", methods=["GET"])
 def get_folders():
@@ -370,6 +413,88 @@ def move_word():
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/review_word", methods=["POST"])
+def review_word():
+    try:
+        data = request.json
+        word_id = data.get("id")
+        quality = data.get("quality")  # 0〜5
+
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+
+        c.execute("""
+            SELECT repetition, interval, ease_factor
+            FROM words WHERE id=?
+        """, (word_id,))
+        row = c.fetchone()
+
+        repetition = row[0] or 0
+        interval   = row[1] or 1
+        ease       = row[2] or 2.5
+
+        # SM-2
+        if quality < 3:
+            repetition = 0
+            interval = 1
+        else:
+            if repetition == 0:
+                interval = 1
+            elif repetition == 1:
+                interval = 6
+            else:
+                interval = round(interval * ease)
+
+            repetition += 1
+
+        # ease factor更新
+        ease = ease + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+        if ease < 1.3:
+            ease = 1.3
+
+        next_review = datetime.now().date()
+
+        c.execute("""
+        INSERT INTO words
+        (source_text, translated_text, source_lang, target_lang,
+        phonetic, example, known, folder_id,
+        ease_factor, interval, repetition, next_review)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            2.5, 1, 0, next_review
+        ))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+    
+@app.route("/due_words", methods=["GET"])
+def due_words():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+
+    today = datetime.now().date()
+
+    c.execute("""
+        SELECT *
+        FROM words
+        WHERE next_review IS NULL
+           OR next_review <= ?
+    """, (today,))
+
+    rows = c.fetchall()
+    conn.close()
+
+    columns = [col[0] for col in c.description]
+
+    result = []
+    for row in rows:
+        result.append(dict(zip(columns, row)))
+    return jsonify(result)
 
 
 if __name__ == "__main__":
