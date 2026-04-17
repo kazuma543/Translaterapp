@@ -153,7 +153,7 @@ def translate_text(text, source=None, target=None):
     }
 
 @app.route("/signup", methods=["POST"])
-@require_auth
+
 def signup():
     try:
         data     = request.json
@@ -175,7 +175,7 @@ def signup():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 @app.route("/login", methods=["POST"])
-@require_auth
+
 def login():
     try:
         data     = request.json
@@ -289,11 +289,11 @@ def get_random_word():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("""
-        SELECT id, source_text, tranlated_text, know 
+        SELECT id, source_text, translated_text, known
         FROM words 
         ORDER BY 
-            CASE WHEN known = 0 THEN 0 ELES 1 END, 
-            RAND() 
+            CASE WHEN known = 0 THEN 0 ELSE 1 END, 
+            RANDOM() 
     LIMIT 1""")
     row = c.fetchone()
     conn.close()
@@ -550,7 +550,7 @@ def review_word():
         next_review = datetime.now().date()
 
         c.execute("""
-        INSERT INTO words
+        UPDATE INTO words
         (source_text, translated_text, source_lang, target_lang,
         phonetic, example, known, folder_id,
         ease_factor, interval, repetition, next_review)
