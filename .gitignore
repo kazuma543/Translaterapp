@@ -9,6 +9,7 @@ dist/
 web-build/
 expo-env.d.ts
 config.js
+words.db
 
 # Native
 .kotlin/
