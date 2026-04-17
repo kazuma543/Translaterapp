@@ -7,19 +7,45 @@ import os
 from dotenv import load_dotenv
 import random
 from datetime import datetime, timedelta
+from supabase import create_client
+import os
 load_dotenv()
 
 API_KEY = os.getenv("AZURE_API_KEY")
 ENDPOINT = os.getenv("AZURE_ENDPOINT")
 LOCATION = os.getenv("AZURE_LOCATION")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")  # service key — never expose this
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 
 if not API_KEY or not ENDPOINT or not LOCATION:
     raise ValueError("環境変数が設定されていません。.envファイルを確認してください。")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("Supabase 環境変数が設定されていません。.envファイルを確認してください。")
+
 
 app = Flask(__name__)
 CORS(app)
 # DB Setup
 DB_NAME = "words.db"
+
+from functools import wraps
+
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        if not token:
+            return jsonify({"error": "Unauthorized"}), 401
+        try:
+            user = supabase.auth.get_user(token)
+            request.user_id = user.user.id
+        except Exception:
+            return jsonify({"error": "Invalid token"}), 401
+        return f(*args, **kwargs)
+    return decorated
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
@@ -126,6 +152,58 @@ def translate_text(text, source=None, target=None):
         "translated_text": translated
     }
 
+@app.route("/signup", methods=["POST"])
+def signup():
+    try:
+        data     = request.json
+        email    = data.get("email", "").strip()
+        password = data.get("password", "")
+
+        if not email or not password:
+            return jsonify({"status": "error", "message": "Email and password are required"}), 400
+        if len(password) < 6:
+            return jsonify({"status": "error", "message": "Password must be at least 6 characters"}), 400
+
+        res = supabase.auth.sign_up({"email": email, "password": password})
+        return jsonify({
+            "status": "success",
+            "message": "Account created! Please check your email to confirm.",
+            "user": res.user.email
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+@app.route("/login", methods=["POST"])
+def login():
+    try:
+        data     = request.json
+        email    = data.get("email", "").strip()
+        password = data.get("password", "")
+
+        if not email or not password:
+            return jsonify({"status": "error", "message": "Email and password are required"}), 400
+
+        res   = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        token = res.session.access_token
+        return jsonify({
+            "status": "success",
+            "token":  token,
+            "user":   res.user.email
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": "Invalid email or password"}), 401
+
+@app.route("/logout", methods=["POST"])
+@require_auth
+def logout():
+    try:
+        token = request.headers.get("Authorization", "").replace("Bearer ", "")
+        supabase.auth.sign_out()
+        return jsonify({"status": "success", "message": "Logged out"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+    
 # API 1: POST /translate
 @app.route("/translate", methods=["POST","OPTIONS"])
 def api_translate():
