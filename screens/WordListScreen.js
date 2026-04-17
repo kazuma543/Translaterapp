@@ -31,7 +31,7 @@ export default function WordListScreen() {
   // ── Fetch ─────────────────────────────────────────────────
 const fetchWords = useCallback(async () => {
   try {
-    const res  = await fetch(`${BACKEND_URL}/words`);
+    const res  = await fetchWithAuth(`${BACKEND_URL}/words`);
     const data = await res.json();
     setWords(data);
   } catch (e) {
@@ -41,7 +41,7 @@ const fetchWords = useCallback(async () => {
 
 const fetchFolders = useCallback(async () => {
   try {
-    const res  = await fetch(`${BACKEND_URL}/folders`);
+    const res  = await etchWithAuth(`${BACKEND_URL}/folders`);
     const data = await res.json();
     setFolders(data);
     if (data.length > 0 && !selectedFolder) setSelectedFolder(data[0]);
@@ -97,7 +97,7 @@ useFocusEffect(
 
     try {
       // 1. Update word content
-      const res = await fetch(`${BACKEND_URL}/update_word`, {
+      const res = await etchWithAuth(`${BACKEND_URL}/update_word`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
@@ -166,7 +166,7 @@ useFocusEffect(
       return;
     }
     try {
-      const response = await fetch(`${BACKEND_URL}/save_word`, {
+      const response = await fetchWithAuth(`${BACKEND_URL}/save_word`, {
         method:  'POST',
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ ...newWord, folder_id: selectedFolder.id }),

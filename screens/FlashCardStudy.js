@@ -17,7 +17,7 @@ export default function FlashCardStudy({ route, navigation }) {
   const translateX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    fetch(`${BACKEND_URL}/words_in_folder/${folder.id}`)
+    fetchWithAuth(`${BACKEND_URL}/words_in_folder/${folder.id}`)
       .then((res) => res.json())
       .then((data) => {
         const shuffled = data.sort(() => Math.random() - 0.5);

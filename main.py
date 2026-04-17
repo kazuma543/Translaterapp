@@ -153,6 +153,7 @@ def translate_text(text, source=None, target=None):
     }
 
 @app.route("/signup", methods=["POST"])
+@require_auth
 def signup():
     try:
         data     = request.json
@@ -174,6 +175,7 @@ def signup():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 @app.route("/login", methods=["POST"])
+@require_auth
 def login():
     try:
         data     = request.json
@@ -203,9 +205,10 @@ def logout():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     
-    
+
 # API 1: POST /translate
 @app.route("/translate", methods=["POST","OPTIONS"])
+@require_auth
 def api_translate():
     print('a')
     if request.method == 'OPTIONS':
@@ -227,6 +230,7 @@ def api_translate():
         return jsonify({'error': str(e)}), 500
 # API 2: POST /save_word
 @app.route('/save_word', methods=['POST'])
+@require_auth
 def save_word():
     try:
         data            = request.json
@@ -260,6 +264,7 @@ def save_word():
 # 重要: この関数の後に何もない(インデントが正しい)ことを確認
 # API 3: GET /words
 @app.route("/words", methods=["GET"])
+@require_auth
 def get_words():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -279,6 +284,7 @@ def get_words():
 
 #Random words API
 @app.route("/word_random", methods=["GET"])
+@require_auth
 def get_random_word():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -305,6 +311,7 @@ def get_random_word():
 
 
 @app.route("/update_known", methods=["POST"])
+@require_auth
 def update_known():
     try:
         data = request.json
@@ -321,6 +328,7 @@ def update_known():
         return jsonify({"status": "error", "message": str(e)}), 500
     
 @app.route("/delete_word", methods=["POST"])
+@require_auth
 def flashcards_delete():
     try:
         data = request.json
@@ -335,6 +343,7 @@ def flashcards_delete():
     return jsonify({"success": True, "message": "Deleted successfully"}), 200
 
 @app.route("/update_word", methods=["POST"])
+@require_auth
 def update_word():
     try:
         data = request.json
@@ -363,6 +372,7 @@ def update_word():
 
 # GET /folders — fetch all folders with word count
 @app.route("/folders", methods=["GET"])
+@require_auth
 def get_folders():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -384,6 +394,7 @@ def get_folders():
 
 # POST /create_folder — create a new folder
 @app.route("/create_folder", methods=["POST"])
+@require_auth
 def create_folder():
     try:
         data  = request.json
@@ -407,6 +418,7 @@ def create_folder():
 
 # POST /delete_folder — delete a folder (words become unassigned)
 @app.route("/delete_folder", methods=["POST"])
+@require_auth
 def delete_folder():
     try:
         data      = request.json
@@ -430,6 +442,7 @@ def delete_folder():
 
 # POST /rename_folder — rename an existing folder
 @app.route("/rename_folder", methods=["POST"])
+@require_auth
 def rename_folder():
     try:
         data      = request.json
@@ -452,6 +465,7 @@ def rename_folder():
 
 # GET /words_in_folder/<folder_id> — fetch words for a specific folder
 @app.route("/words_in_folder/<int:folder_id>", methods=["GET"])
+@require_auth
 def words_in_folder(folder_id):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -476,6 +490,7 @@ def words_in_folder(folder_id):
 
 # POST /move_word — move a word to a different folder
 @app.route("/move_word", methods=["POST"])
+@require_auth
 def move_word():
     try:
         data      = request.json
@@ -493,6 +508,7 @@ def move_word():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/review_word", methods=["POST"])
+@require_auth
 def review_word():
     try:
         data = request.json
@@ -551,6 +567,7 @@ def review_word():
         return jsonify({"status": "error", "message": str(e)})
     
 @app.route("/due_words", methods=["GET"])
+@require_auth
 def due_words():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()

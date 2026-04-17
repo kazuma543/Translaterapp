@@ -22,7 +22,7 @@ export default function TranslateScreen() {
   // Fetch folders every time this tab is focused
   useFocusEffect(
     useCallback(() => {
-      fetch(`${BACKEND_URL}/folders`)
+      fetchWithAuth(`${BACKEND_URL}/folders`)
         .then((res) => res.json())
         .then((data) => {
           setFolders(data);

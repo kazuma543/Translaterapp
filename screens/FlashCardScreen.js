@@ -18,7 +18,7 @@ export default function FlashCardScreen({ navigation }) {
 
   const fetchFolders = async () => {
     try {
-      const res  = await fetch(`${BACKEND_URL}/folders`);
+      const res  = await fetchWithAuth(`${BACKEND_URL}/folders`);
       const data = await res.json();
       setFolders(data);
     } catch (e) {
