@@ -6,6 +6,8 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { BACKEND_URL } from '../config';
+// 他のインポートの下に追加
+import { fetchWithAuth } from '../api/api';
 
 const FOLDER_COLORS = {
   blue:  { bg: "#e3f2fd", border: "#90caf9", text: "#1565c0" },
@@ -31,7 +33,7 @@ export default function WordListScreen() {
   // ── Fetch ─────────────────────────────────────────────────
 const fetchWords = useCallback(async () => {
   try {
-    const res  = await fetchWithAuth(`${BACKEND_URL}/words`);
+    const res  = await fetchWithAuth(`/words`);
     const data = await res.json();
     setWords(data);
   } catch (e) {
@@ -41,7 +43,7 @@ const fetchWords = useCallback(async () => {
 
 const fetchFolders = useCallback(async () => {
   try {
-    const res  = await etchWithAuth(`${BACKEND_URL}/folders`);
+    const res  = await fetchWithAuth(`/folders`);
     const data = await res.json();
     setFolders(data);
     if (data.length > 0 && !selectedFolder) setSelectedFolder(data[0]);
@@ -97,7 +99,7 @@ useFocusEffect(
 
     try {
       // 1. Update word content
-      const res = await etchWithAuth(`${BACKEND_URL}/update_word`, {
+      const res = await fetchWithAuth(`/update_word`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
@@ -113,7 +115,7 @@ useFocusEffect(
 
       // 2. Move to new folder if changed
       if (editFolder?.id !== activeWord.folder_id) {
-        await fetch(`${BACKEND_URL}/move_word`, {
+        await fetchWithAuth(`/move_word`, {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({ word_id: editedWord.id, folder_id: editFolder?.id ?? null }),
@@ -142,7 +144,7 @@ useFocusEffect(
   };
 
   const deleteItem = (id) => {
-    fetch(`${BACKEND_URL}/delete_word`, {
+    fetchWithAuth(`/delete_word`, {
       method: 'POST',
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
@@ -166,7 +168,7 @@ useFocusEffect(
       return;
     }
     try {
-      const response = await fetchWithAuth(`${BACKEND_URL}/save_word`, {
+      const response = await fetchWithAuth(`/save_word`, {
         method:  'POST',
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ ...newWord, folder_id: selectedFolder.id }),

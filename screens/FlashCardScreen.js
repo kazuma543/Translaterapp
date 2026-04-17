@@ -5,6 +5,8 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { BACKEND_URL } from "../config";
+// 他のインポートの下に追加
+import { fetchWithAuth } from '../api/api';
 
 const FOLDER_COLORS = {
   blue:  { bg: "#e3f2fd", icon: "#bbdefb", text: "#1565c0" },
@@ -18,7 +20,7 @@ export default function FlashCardScreen({ navigation }) {
 
   const fetchFolders = async () => {
     try {
-      const res  = await fetchWithAuth(`${BACKEND_URL}/folders`);
+      const res  = await fetchWithAuth(`/folders`);
       const data = await res.json();
       setFolders(data);
     } catch (e) {
@@ -37,7 +39,7 @@ export default function FlashCardScreen({ navigation }) {
       "Enter a folder name:",
       async (name) => {
         if (!name?.trim()) return;
-        await fetch(`${BACKEND_URL}/create_folder`, {
+        await fetchWithAuth(`/create_folder`, {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({ name: name.trim(), color: "blue" }),
@@ -56,7 +58,7 @@ export default function FlashCardScreen({ navigation }) {
         {
           text: "Delete", style: "destructive",
           onPress: async () => {
-            await fetch(`${BACKEND_URL}/delete_folder`, {
+            await fetchWithAuth(`/delete_folder`, {
               method:  "POST",
               headers: { "Content-Type": "application/json" },
               body:    JSON.stringify({ id: folder.id }),

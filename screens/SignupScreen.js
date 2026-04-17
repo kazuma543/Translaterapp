@@ -1,5 +1,5 @@
 const handleSignup = async () => {
-  const res = await fetchWithAuth(`${BACKEND_URL}/signup`, {
+  const res = await fetchWithAuth(`/signup`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),

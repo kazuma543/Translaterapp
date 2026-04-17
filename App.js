@@ -8,6 +8,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import TranslateScreen from './screens/TranslateScreen';
 import WordListScreen from './screens/WordListScreen';
 import { StyleSheet } from 'react-native';
+import LoginScreen from "./screens/LoginScreen";
+
 
 
 const FlashStack = createNativeStackNavigator();
@@ -54,6 +56,11 @@ export default function App() {
           name="FlashCard"
           component={FlashCardStack}
           />
+          <Tab.Screen
+          name="Login"
+          component={LoginScreen}
+          />
+          
         </Tab.Navigator>
         </NavigationContainer>
       </GestureHandlerRootView>

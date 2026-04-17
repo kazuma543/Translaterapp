@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BACKEND_URL } from "../config";
+// 他のインポートの下に追加
+import { fetchWithAuth } from '../api/api';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
@@ -9,7 +11,7 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     try {
-      const res = await fetchWithAuth(`${BACKEND_URL}/login`, {
+      const res = await fetchWithAuth(`/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

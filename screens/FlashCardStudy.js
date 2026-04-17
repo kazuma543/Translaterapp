@@ -5,6 +5,8 @@ import {
 } from "react-native";
 import { PanGestureHandler } from "react-native-gesture-handler";
 import { BACKEND_URL } from "../config";
+// 他のインポートの下に追加
+import { fetchWithAuth } from '../api/api';
 
 export default function FlashCardStudy({ route, navigation }) {
   const { folder } = route.params;
@@ -37,7 +39,7 @@ export default function FlashCardStudy({ route, navigation }) {
     const word = cards[currentIndex];
     if (!word) return;
 
-    fetch(`${BACKEND_URL}/review_word`, {
+    fetchWithAuth(`/review_word`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

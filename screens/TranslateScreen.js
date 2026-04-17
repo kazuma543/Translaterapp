@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { BACKEND_URL } from '../config';
+// 他のインポートの下に追加
+import { fetchWithAuth } from '../api/api';
 
 const FOLDER_COLORS = {
   blue:  { bg: "#e3f2fd", border: "#90caf9", text: "#1565c0" },
@@ -22,7 +24,7 @@ export default function TranslateScreen() {
   // Fetch folders every time this tab is focused
   useFocusEffect(
     useCallback(() => {
-      fetchWithAuth(`${BACKEND_URL}/folders`)
+      fetchWithAuth(`/folders`)
         .then((res) => res.json())
         .then((data) => {
           setFolders(data);
@@ -39,7 +41,7 @@ export default function TranslateScreen() {
     if (!inputText.trim()) return;
     setLoading(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/translate`, {
+      const response = await fetchWithAuth(`/translate`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
@@ -68,7 +70,7 @@ export default function TranslateScreen() {
     }
 
     try {
-      const response = await fetch(`${BACKEND_URL}/save_word`, {
+      const response = await fetchWithAuth(`/save_word`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
