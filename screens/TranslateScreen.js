@@ -6,7 +6,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { BACKEND_URL } from '../config';
 // 他のインポートの下に追加
-import { fetchWithAuth } from '../api/api';
+import { useAuth } from '../context/AuthContext';
 
 const FOLDER_COLORS = {
   blue:  { bg: "#e3f2fd", border: "#90caf9", text: "#1565c0" },
@@ -20,11 +20,13 @@ export default function TranslateScreen() {
   const [loading,        setLoading]        = useState(false);
   const [folders,        setFolders]        = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
+  const { authFetch } = useAuth();
+
 
   // Fetch folders every time this tab is focused
   useFocusEffect(
     useCallback(() => {
-      fetchWithAuth(`/folders`)
+      authFetch(`${BACKEND_URL}/folders`)
         .then((res) => res.json())
         .then((data) => {
           setFolders(data);
@@ -41,7 +43,7 @@ export default function TranslateScreen() {
     if (!inputText.trim()) return;
     setLoading(true);
     try {
-      const response = await fetchWithAuth(`/translate`, {
+      const response = await authFetch(`${BACKEND_URL}/translate`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
@@ -70,7 +72,7 @@ export default function TranslateScreen() {
     }
 
     try {
-      const response = await fetchWithAuth(`/save_word`, {
+      const response = await authFetch(`${BACKEND_URL}/save_word`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({

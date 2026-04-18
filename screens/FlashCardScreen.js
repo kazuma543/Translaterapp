@@ -6,7 +6,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { BACKEND_URL } from "../config";
 // 他のインポートの下に追加
-import { fetchWithAuth } from '../api/api';
+import { useAuth } from '../context/AuthContext';
 
 const FOLDER_COLORS = {
   blue:  { bg: "#e3f2fd", icon: "#bbdefb", text: "#1565c0" },
@@ -17,10 +17,11 @@ const FOLDER_COLORS = {
 export default function FlashCardScreen({ navigation }) {
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { authFetch } = useAuth();
 
   const fetchFolders = async () => {
     try {
-      const res  = await fetchWithAuth(`/folders`);
+      const res  = await authFetch(`${BACKEND_URL}/folders`);
       const data = await res.json();
       setFolders(data);
     } catch (e) {
@@ -39,7 +40,7 @@ export default function FlashCardScreen({ navigation }) {
       "Enter a folder name:",
       async (name) => {
         if (!name?.trim()) return;
-        await fetchWithAuth(`/create_folder`, {
+        await authFetch(`${BACKEND_URL}/create_folder`, {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({ name: name.trim(), color: "blue" }),
@@ -58,7 +59,7 @@ export default function FlashCardScreen({ navigation }) {
         {
           text: "Delete", style: "destructive",
           onPress: async () => {
-            await fetchWithAuth(`/delete_folder`, {
+            await authFetch(`${BACKEND_URL}/delete_folder`, {
               method:  "POST",
               headers: { "Content-Type": "application/json" },
               body:    JSON.stringify({ id: folder.id }),

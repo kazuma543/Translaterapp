@@ -6,7 +6,7 @@ import {
 import { PanGestureHandler } from "react-native-gesture-handler";
 import { BACKEND_URL } from "../config";
 // 他のインポートの下に追加
-import { fetchWithAuth } from '../api/api';
+import { useAuth } from '../context/AuthContext'
 
 export default function FlashCardStudy({ route, navigation }) {
   const { folder } = route.params;
@@ -15,11 +15,11 @@ export default function FlashCardStudy({ route, navigation }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [loading, setLoading]       = useState(true);
-
+  const { authFetch } = useAuth();
   const translateX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    fetchWithAuth(`${BACKEND_URL}/words_in_folder/${folder.id}`)
+    authFetch(`${BACKEND_URL}/words_in_folder/${folder.id}`)
       .then((res) => res.json())
       .then((data) => {
         const shuffled = data.sort(() => Math.random() - 0.5);
@@ -39,7 +39,7 @@ export default function FlashCardStudy({ route, navigation }) {
     const word = cards[currentIndex];
     if (!word) return;
 
-    fetchWithAuth(`/review_word`, {
+    authFetch(`${BACKEND_URL}/review_word`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

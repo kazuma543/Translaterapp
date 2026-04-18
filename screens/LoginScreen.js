@@ -1,70 +1,90 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { BACKEND_URL } from "../config";
-// 他のインポートの下に追加
-import { fetchWithAuth } from '../api/api';
+import React, { useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, Alert, KeyboardAvoidingView,
+  Platform, ScrollView, ActivityIndicator
+} from 'react-native';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { login }   = useAuth();
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [loading,  setLoading]  = useState(false);
 
   const handleLogin = async () => {
-    try {
-      const res = await fetchWithAuth(`/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (data.status === "success") {
-        await AsyncStorage.setItem("token", data.token);
-        navigation.replace("Home"); // ログイン後の画面
-      } else {
-        Alert.alert("Error", data.message);
-      }
-    } catch (e) {
-      Alert.alert("Error", "Login failed");
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter email and password');
+      return;
     }
+    setLoading(true);
+    const result = await login(email.trim(), password);
+    setLoading(false);
+    if (!result.success) {
+      Alert.alert('Login failed', result.message || 'Invalid email or password');
+    }
+    // If success, App.js automatically switches to MainTabs
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.title}>TranslaterApp</Text>
+        <Text style={styles.subtitle}>Log in to your account</Text>
 
-      <TextInput
-        placeholder="Email"
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-      />
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="email"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoComplete="password"
+        />
 
-      <TextInput
-        placeholder="Password"
-        secureTextEntry
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-      />
+        <TouchableOpacity
+          style={[styles.btn, loading && { opacity: 0.6 }]}
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          {loading
+            ? <ActivityIndicator color="#fff" />
+            : <Text style={styles.btnText}>Log in</Text>
+          }
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-        <Text style={styles.link}>Create account</Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          style={styles.linkBtn}
+          onPress={() => navigation.navigate('Signup')}
+        >
+          <Text style={styles.linkText}>Don't have an account? Sign up</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20 },
-  title: { fontSize: 28, marginBottom: 20, textAlign: "center" },
-  input: { borderWidth: 1, padding: 12, marginBottom: 12, borderRadius: 8 },
-  button: { backgroundColor: "#0a7ea4", padding: 14, borderRadius: 8 },
-  buttonText: { color: "#fff", textAlign: "center" },
-  link: { marginTop: 12, textAlign: "center", color: "#0a7ea4" }
+  container:  { flexGrow: 1, justifyContent: 'center', padding: 28, backgroundColor: '#90c5dc' },
+  title:      { fontSize: 32, fontWeight: 'bold', color: '#1a1a1a', textAlign: 'center', marginBottom: 6 },
+  subtitle:   { fontSize: 15, color: '#444', textAlign: 'center', marginBottom: 32 },
+  input:      { backgroundColor: '#fff', borderRadius: 10, padding: 14, fontSize: 16, marginBottom: 14, borderWidth: 1, borderColor: '#ddd' },
+  btn:        { backgroundColor: '#0a7ea4', borderRadius: 10, padding: 15, alignItems: 'center', marginTop: 4 },
+  btnText:    { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  linkBtn:    { marginTop: 20, alignItems: 'center' },
+  linkText:   { color: '#0a7ea4', fontSize: 14, fontWeight: '600' },
 });
