@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, Text, Alert } from 'react-native';
 import { NavigationContainer }     from '@react-navigation/native';
 import { GestureHandlerRootView }  from 'react-native-gesture-handler';
 import { createBottomTabNavigator }   from '@react-navigation/bottom-tabs';
@@ -14,11 +14,10 @@ import FlashCardStudy   from './screens/FlashCardStudy';
 import LoginScreen      from './screens/LoginScreen';
 import SignupScreen     from './screens/SignupScreen';
 
-const Tab       = createBottomTabNavigator();
-const AuthStack = createNativeStackNavigator();
+const Tab        = createBottomTabNavigator();
+const AuthStack  = createNativeStackNavigator();
 const FlashStack = createNativeStackNavigator();
 
-// FlashCard stack (folder list → study mode)
 function FlashCardStack() {
   return (
     <FlashStack.Navigator screenOptions={{ headerShown: false }}>
@@ -28,15 +27,47 @@ function FlashCardStack() {
   );
 }
 
-// Main app tabs — only shown when logged in
+// ── ログアウトボタン ──────────────────────────────────────
+function LogoutButton() {
+  const { logout, user } = useAuth();
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Log out',
+      `Log out from ${user}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log out',
+          style: 'destructive',
+          onPress: logout,   // AuthContextのlogoutを呼ぶだけ
+        },
+      ]
+    );
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={handleLogout}
+      style={{ marginRight: 16 }}
+    >
+      <Text style={{ color: '#e53935', fontSize: 14, fontWeight: '600' }}>
+        Log out
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+// ── メインタブ ────────────────────────────────────────────
 function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
-        headerStyle:          { backgroundColor: '#fff' },
-        headerTintColor:      '#0c0b0b',
-        tabBarStyle:          { backgroundColor: '#121212' },
-        tabBarActiveTintColor: '#4CAF50',
+        headerStyle:             { backgroundColor: '#fff' },
+        headerTintColor:         '#0c0b0b',
+        headerRight:             () => <LogoutButton />,  // 全タブのヘッダー右上に表示
+        tabBarStyle:             { backgroundColor: '#121212' },
+        tabBarActiveTintColor:   '#4CAF50',
         tabBarInactiveTintColor: '#aaa',
       }}
     >
@@ -47,7 +78,7 @@ function MainTabs() {
   );
 }
 
-// Auth screens — only shown when logged out
+// ── 認証スタック ──────────────────────────────────────────
 function AuthNavigator() {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
@@ -57,7 +88,7 @@ function AuthNavigator() {
   );
 }
 
-// Root — switches between auth and main based on login state
+// ── ルート（ログイン状態で分岐） ──────────────────────────
 function RootNavigator() {
   const { token, loading } = useAuth();
 
