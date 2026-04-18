@@ -13,13 +13,21 @@ const FOLDER_COLORS = {
   green: { bg: "#e8f5e9", border: "#a5d6a7", text: "#2e7d32" },
   amber: { bg: "#fff8e1", border: "#ffe082", text: "#f57f17" },
 };
-
+const LANGUAGES = [
+  { label: "日本語", value: "ja" },
+  { label: "English", value: "en" },
+  { label: "한국어", value: "ko" },
+  { label: "Español", value: "es" },
+  { label: "Français", value: "fr" },
+  { label: "Deutsch", value: "de" },
+];
 export default function TranslateScreen() {
   const [inputText,      setInputText]      = useState('');
   const [translatedText, setTranslatedText] = useState('');
   const [loading,        setLoading]        = useState(false);
   const [folders,        setFolders]        = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
+  const [targetLang, setTargetLang] = useState("ja");
   const { authFetch } = useAuth();
 
 
@@ -49,7 +57,7 @@ export default function TranslateScreen() {
         body:    JSON.stringify({
           text:        inputText,
           source_lang: "auto",
-          target_lang: "auto",
+          target_lang: targetLang,
         }),
       });
       const data = await response.json();
@@ -113,6 +121,28 @@ export default function TranslateScreen() {
         onChangeText={setInputText}
         multiline
       />
+      {/* ★ 言語選択ボタンの並びを追加 */}
+      <Text style={styles.label}>翻訳先の言語:</Text>
+      <View style={styles.languageRow}>
+        {LANGUAGES.map((lang) => (
+          <TouchableOpacity
+            key={lang.value}
+            style={[
+              styles.langPill,
+              targetLang === lang.value && styles.langPillActive
+            ]}
+            onPress={() => setTargetLang(lang.value)}
+          >
+            <Text style={[
+              styles.langPillText,
+              targetLang === lang.value && styles.langPillTextActive
+            ]}>
+              {lang.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
 
       <Button
         title={loading ? "Translating..." : "Translate"}
@@ -230,5 +260,37 @@ const styles = StyleSheet.create({
   folderPillText: {
     fontSize:   13,
     fontWeight: "600",
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#444",
+    marginTop: 8,
+  },
+  languageRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 8,
+  },
+  langPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: "#ccc",
+  },
+  langPillActive: {
+    backgroundColor: "#1565c0",
+    borderColor: "#1565c0",
+  },
+  langPillText: {
+    fontSize: 12,
+    color: "#666",
+  },
+  langPillTextActive: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });

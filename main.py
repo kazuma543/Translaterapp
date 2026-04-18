@@ -43,15 +43,29 @@ def require_auth(f):
     return decorated
 
 # ── Translation helpers ───────────────────────────────────
-def detect_language(text):
-    url     = f"{ENDPOINT}/detect?api-version=3.0"
+def detect_language(text, source=None, target=None):
+    if not source or source == "auto":
+        source = detect_language(text) or "en"
+    if not target or source == "auto":
+        source = "en" if source =="ja" else "ja"
+    url = f"{ENDPOINT}/translate?api-version=3.0&from={source}&to={target}"
     headers = {
         "Ocp-Apim-Subscription-Key":    API_KEY,
         "Ocp-Apim-Subscription-Region": LOCATION,
         "Content-type":                 "application/json",
+        "X-ClientTraceId":              str(uuid.uuid4()),
     }
     res = requests.post(url, headers=headers, json=[{"text": text}])
-    return res.json()[0]["language"]
+
+    data = res.json()
+    if "error" in data:
+        raise Exception(data["error"]["message"])
+
+    return {
+        "source_language": source,
+        "target_language": target,
+        "translated_text": data[0]["translations"][0]["text"],
+    }
 
 def translate_text(text, source=None, target=None):
     if not source:
@@ -132,9 +146,13 @@ def api_translate():
     try:
         data = request.json
         text = data.get("text", "")
+        source = data.get("source_lang", "auto")
+        target = data.get("target_lang", "ja")
         if not text or len(text) > 1000:
             return jsonify({"error": "text required, max 1000 chars"}), 400
         return jsonify(translate_text(text, data.get("source"), data.get("target")))
+        result = translate_text(text, source, target)
+        return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

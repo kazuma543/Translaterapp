@@ -4,7 +4,7 @@ import { NavigationContainer }     from '@react-navigation/native';
 import { GestureHandlerRootView }  from 'react-native-gesture-handler';
 import { createBottomTabNavigator }   from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
+import { View, ActivityIndicator } from 'react-native';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 import TranslateScreen  from './screens/TranslateScreen';
