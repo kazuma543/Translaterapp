@@ -43,32 +43,20 @@ def require_auth(f):
     return decorated
 
 # ── Translation helpers ───────────────────────────────────
-def detect_language(text, source=None, target=None):
-    if not source or source == "auto":
-        source = detect_language(text) or "en"
-    if not target or source == "auto":
-        source = "en" if source =="ja" else "ja"
-    url = f"{ENDPOINT}/translate?api-version=3.0&from={source}&to={target}"
+# ── Translation helpers ───────────────────────────────────
+def detect_language(text):
+    url = f"{ENDPOINT}/detect?api-version=3.0"
     headers = {
         "Ocp-Apim-Subscription-Key":    API_KEY,
         "Ocp-Apim-Subscription-Region": LOCATION,
         "Content-type":                 "application/json",
-        "X-ClientTraceId":              str(uuid.uuid4()),
     }
-    res = requests.post(url, headers=headers, json=[{"text": text}])
-
+    res  = requests.post(url, headers=headers, json=[{"text": text}])
     data = res.json()
-    if "error" in data:
-        raise Exception(data["error"]["message"])
-
-    return {
-        "source_language": source,
-        "target_language": target,
-        "translated_text": data[0]["translations"][0]["text"],
-    }
+    return data[0]["language"]
 
 def translate_text(text, source=None, target=None):
-    if not source:
+    if not source or source == "auto":
         source = detect_language(text) or "en"
     if not target or target == "auto":
         target = "en" if source == "ja" else "ja"
@@ -85,6 +73,7 @@ def translate_text(text, source=None, target=None):
         "target_language": target,
         "translated_text": res.json()[0]["translations"][0]["text"],
     }
+
 
 # ════════════════════════════════════════════════════════════
 # AUTH
@@ -131,7 +120,7 @@ def logout():
 # ════════════════════════════════════════════════════════════
 # TRANSLATE
 # ════════════════════════════════════════════════════════════
-
+# ── /translate エンドポイント ─────────────────────────────
 @app.route("/translate", methods=["POST", "OPTIONS"])
 def api_translate():
     if request.method == "OPTIONS":
@@ -144,18 +133,16 @@ def api_translate():
     except Exception:
         return jsonify({"error": "Invalid token"}), 401
     try:
-        data = request.json
-        text = data.get("text", "")
-        source = data.get("source_lang", "auto")
-        target = data.get("target_lang", "ja")
+        data   = request.json
+        text   = data.get("text", "")
+        source = data.get("source", "auto")  # フロントから"source"で来る
+        target = data.get("target", "ja")    # フロントから"target"で来る
         if not text or len(text) > 1000:
             return jsonify({"error": "text required, max 1000 chars"}), 400
-        return jsonify(translate_text(text, data.get("source"), data.get("target")))
-        result = translate_text(text, source, target)
+        result = translate_text(text, source, target)  # ← sourceとtargetを渡す
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 # ════════════════════════════════════════════════════════════
 # FOLDERS
 # ════════════════════════════════════════════════════════════
