@@ -16,10 +16,12 @@ const FOLDER_COLORS = {
 const LANGUAGES = [
   { label: "日本語", value: "ja" },
   { label: "English", value: "en" },
-  { label: "한국어", value: "ko" },
-  { label: "Español", value: "es" },
-  { label: "Français", value: "fr" },
-  { label: "Deutsch", value: "de" },
+  { label: "中国語", value: "zh-Hans" }, // 簡体字
+  { label: "ヒンドゥー語", value: "hi" },
+  { label: "インドネシア語", value: "id" },
+  { label: "タイ語", value: "th" },
+  { label: "ベトナム語", value: "vi" },
+  { label: "韓国語", value: "ko" },
 ];
 export default function TranslateScreen() {
   const [inputText,      setInputText]      = useState('');
@@ -47,27 +49,27 @@ export default function TranslateScreen() {
     }, [])
   );
 
-  const handleTranslate = async () => {
-    if (!inputText.trim()) return;
-    setLoading(true);
-    try {
-      const response = await authFetch(`${BACKEND_URL}/translate`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          text:        inputText,
-          source_lang: "auto",
-          target_lang: targetLang,
-        }),
-      });
-      const data = await response.json();
-      setTranslatedText(data.translated_text || "");
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Translation failed");
-    }
-    setLoading(false);
-  };
+const handleTranslate = async () => {
+  if (!inputText.trim()) return;
+  setLoading(true);
+  try {
+    const response = await authFetch(`${BACKEND_URL}/translate`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        text:   inputText,
+        source: "auto",      // ← source_lang → source
+        target: targetLang,  // ← target_lang → target
+      }),
+    });
+    const data = await response.json();
+    setTranslatedText(data.translated_text || "");
+  } catch (error) {
+    console.error(error);
+    Alert.alert("Error", "Translation failed");
+  }
+  setLoading(false);
+};
 
   const handleSaveWord = async () => {
     if (!inputText.trim() || !translatedText.trim()) {

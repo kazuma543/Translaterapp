@@ -17,6 +17,7 @@ export default function FlashCardStudy({ route, navigation }) {
   const [loading, setLoading]       = useState(true);
   const { authFetch } = useAuth();
   const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     authFetch(`${BACKEND_URL}/words_in_folder/${folder.id}`)
@@ -30,7 +31,7 @@ export default function FlashCardStudy({ route, navigation }) {
   }, [folder.id]);
 
   const onGestureEvent = Animated.event(
-    [{ nativeEvent: { translationX: translateX } }],
+    [{ nativeEvent: { translationX: translateX, translationY: translateY } }],
     { useNativeDriver: false }
   );
 
@@ -38,6 +39,8 @@ export default function FlashCardStudy({ route, navigation }) {
   const processReview = (qualityScore) => {
     const word = cards[currentIndex];
     if (!word) return;
+    console.log("Processing review with score:", qualityScore);
+    setShowAnswer(false);
 
     authFetch(`${BACKEND_URL}/review_word`, {
       method: "POST",
@@ -47,13 +50,17 @@ export default function FlashCardStudy({ route, navigation }) {
         quality: qualityScore
       }),
     })
-    .then(res => res.json())
-    .then(data => console.log("Review saved:", data))
-    .catch(err => console.error("Error saving review:", err));
-
-    setShowAnswer(false);
+  .then(res => res.json())
+  .then(data => {
+    console.log("Review saved successfully:", data);
+    // 成功したら次のインデックスへ
     setCurrentIndex((prev) => prev + 1);
-  };
+  })
+  .catch(err => {
+    console.error("Error saving review:", err);
+    Alert.alert("Error", "保存に失敗しました");
+  });
+};
 
   // スワイプ用
   const handleSwipe = (direction) => {
@@ -68,14 +75,18 @@ export default function FlashCardStudy({ route, navigation }) {
 
   const onHandlerStateChange = (event) => {
     if (event.nativeEvent.state === 5) { // END
-      const { translationX } = event.nativeEvent;
-      if (translationX > 100) {
-        handleSwipe("right");
-      } else if (translationX < -100) {
-        handleSwipe("left");
+      const { translationX, translationY} = event.nativeEvent;
+      if (translationX > 120) {
+        processReview(5);
+      } else if (translationX < -120) {
+        processReview(1);
+      } else if (translationY < -120){
+        processReview(3);
       }
       Animated.spring(translateX, { toValue: 0, useNativeDriver: false }).start();
+      Animated.spring(translateY, { toValue: 0, useNativeDriver: false }).start();
     }
+    
   };
 
   if (loading) {
@@ -99,6 +110,7 @@ export default function FlashCardStudy({ route, navigation }) {
     );
   }
 
+
   const card     = cards[currentIndex];
   const progress = currentIndex / cards.length;
 
@@ -106,7 +118,7 @@ export default function FlashCardStudy({ route, navigation }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.headerBack}>‹ Back</Text>
+          <Text style={styles.headerBack}> Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{folder.name}</Text>
         <Text style={styles.headerCount}>{currentIndex + 1} / {cards.length}</Text>
@@ -120,8 +132,9 @@ export default function FlashCardStudy({ route, navigation }) {
         onGestureEvent={onGestureEvent}
         onHandlerStateChange={onHandlerStateChange}
       >
-        <Animated.View style={[styles.card, { transform: [{ translateX }] }]}>
-          <TouchableOpacity onPress={() => setShowAnswer(!showAnswer)} activeOpacity={0.9} style={{width:'100%', alignItems:'center'}}>
+        <Animated.View style={[styles.card, { transform: [{ translateX:translateX }, {translateY:translateY}] }]}>
+          <TouchableOpacity 
+            onPress={() => setShowAnswer(!showAnswer)} activeOpacity={0.9} style={{width:'100%', alignItems:'center'}}>
             {showAnswer ? (
               <>
                 <Text style={styles.cardSource}>{card.source_text}</Text>
@@ -138,22 +151,43 @@ export default function FlashCardStudy({ route, navigation }) {
         </Animated.View>
       </PanGestureHandler>
 
-      <Text style={styles.hint}>Tap: Answer  ·  Right: Memorised  ·  Left: Not yet</Text>
+      <Text style={styles.hint}>
+        ← Again  ·  ↑ Good  ·  → Easy
+      </Text>
 
-      {/* 学習ボタン：スコア 1(Again), 3(Good), 5(Easy) */}
+        {/* 学習ボタン：スコア 1(Again), 3(Good), 5(Easy) */}
+      
       <View style={styles.btnRow}>
-        <TouchableOpacity style={[styles.actionBtn, styles.btnAgain]} onPress={() => handleReview(1)}>
-          <Text style={styles.btnText}>Again</Text>
-        </TouchableOpacity>
+  <TouchableOpacity 
+    style={[styles.actionBtn, styles.btnAgain]} 
+    onPress={() => {
+      console.log("Again button pressed");
+      processReview(1);
+    }}
+  >
+    <Text style={styles.btnText}>✖ Again</Text>
+  </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.actionBtn, styles.btnGood]} onPress={() => handleReview(3)}>
-          <Text style={styles.btnText}>Good</Text>
-        </TouchableOpacity>
+  <TouchableOpacity 
+    style={[styles.actionBtn, styles.btnGood]} 
+    onPress={() => {
+      console.log("Good button pressed");
+      processReview(3);
+    }}
+  >
+    <Text style={styles.btnText}>▲ Good</Text>
+  </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.actionBtn, styles.btnEasy]} onPress={() => handleReview(5)}>
-          <Text style={styles.btnText}>Easy</Text>
-        </TouchableOpacity>
-      </View>
+  <TouchableOpacity 
+    style={[styles.actionBtn, styles.btnEasy]} 
+    onPress={() => {
+      console.log("Easy button pressed");
+      processReview(5);
+    }}
+  >
+    <Text style={styles.btnText}>✔ Easy</Text>
+  </TouchableOpacity>
+</View>
     </View>
   );
 }
@@ -199,4 +233,32 @@ const styles = StyleSheet.create({
   finishSub:        { fontSize: 14, color: "#555", textAlign: "center", marginBottom: 30 },
   backBtn:          { backgroundColor: "#2196f3", borderRadius: 10, paddingVertical: 12, paddingHorizontal: 32 },
   backBtnText:      { color: "#fff", fontSize: 15, fontWeight: "600" },
+  hintContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 20,
+    gap: 25,
+  },
+  hintItem: {
+    alignItems: "center",
+  },
+  hintIcon: {
+    fontSize: 60,
+    fontWeight: "bold",
+    marginBottom: 2,
+  },
+  hintLabel: {
+    fontSize: 15,
+    color: "#444",
+    fontWeight: "600",
+  },
+
+  // ボタン部分も三角に変更
+  btnGood: {
+    backgroundColor: "#f35d21ff",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 4
+  }
 });

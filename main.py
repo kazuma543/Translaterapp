@@ -298,12 +298,14 @@ def get_words():
         res = supabase.table("words") \
             .select("*, folders(name)") \
             .eq("user_id", request.user_id) \
+            .order("id", desc=True) \
             .execute()
         words = []
         for w in res.data:
             words.append({
                 **{k: v for k, v in w.items() if k != "folders"},
                 "folder_name": w["folders"]["name"] if w.get("folders") else None,
+                "quality": w.get("quality", 0) if w.get("quality") is not None else 0
             })
         return jsonify(words)
     except Exception as e:
@@ -315,6 +317,12 @@ def update_word():
     try:
         data    = request.json
         word_id = data.get("id")
+        quality = data.get("quality")
+        is_known = 1 if quality >= 3 else 0
+        res = supabase.table("words") \
+            .update({
+                "quality": quality,
+                "known": is_known,}) 
         if not word_id:
             return jsonify({"status": "error", "message": "id required"}), 400
         supabase.table("words") \

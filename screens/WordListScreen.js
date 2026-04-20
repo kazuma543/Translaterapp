@@ -52,8 +52,10 @@ const fetchFolders = useCallback(async () => {
     console.error("Failed to fetch folders:", e);
   }
 }, [selectedFolder]);
+// WordListScreen.js
 useFocusEffect(
   useCallback(() => {
+    console.log("Refreshing word list..."); // これが戻った時にログに出るか確認
     fetchWords();
     fetchFolders();
   }, [fetchWords, fetchFolders])
@@ -64,6 +66,13 @@ useFocusEffect(
     await fetchWords();
     setRefreshing(false);
   };
+// qualityスコアに基づいてアイコンと色を決定する
+const getStatusDetails = (quality) => {
+  const q = Number(quality);
+  if (q >= 4) return { icon: "✔", color: "#4caf50" }; // Easy
+  if (q === 3) return { icon: "▲", color: "#2196f3" }; // Good
+  return { icon: "✖", color: "#f44336" };             // Again / Not learned
+};
 
   // ── Helpers ───────────────────────────────────────────────
   const isJapanese = (text) => {
@@ -214,17 +223,43 @@ useFocusEffect(
   };
 
   // ── Render list ───────────────────────────────────────────
-  const renderHeader = () => (
-    <View style={styles.headerRow}>
-      {[['id','ID'],['english','English'],['phonetic','Phonetic'],['japanese','Japanese'],['known','Memorised']].map(([key, label]) => (
-        <TouchableOpacity key={key} style={styles.headerCell} onPress={() => sortBy(key)}>
-          <Text style={styles.headerText}>{label}{getSortIcon(key)}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
+const renderHeader = () => (
+  <View style={styles.headerRow}>
+    <TouchableOpacity style={styles.headerCell} onPress={() => sortBy('id')}>
+      <Text style={styles.headerText}>ID{getSortIcon('id')}</Text>
+    </TouchableOpacity>
+    <TouchableOpacity style={styles.headerCell} onPress={() => sortBy('english')}>
+      <Text style={styles.headerText}>English{getSortIcon('english')}</Text>
+    </TouchableOpacity>
+    <TouchableOpacity style={styles.headerCell}>
+      <Text style={styles.headerText}>Phonetic</Text>
+    </TouchableOpacity>
 
-  const renderItem = ({ item }) => (
+    {/* ← Japanese → Original に変更、onPressなし */}
+    <View style={styles.headerCell}>
+      <Text style={styles.headerText}>Original</Text>
+    </View>
+
+    <TouchableOpacity style={styles.headerCell} onPress={() => sortBy('known')}>
+      <Text style={styles.headerText}>Memorised{getSortIcon('known')}</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+  const renderItem = ({ item }) => {
+    const q = Number(item.quality || 0);
+  
+  let statusIcon = "✖";
+  let statusColor = "#f44336";
+
+  if (q >= 4) {
+    statusIcon = "✔";
+    statusColor = "#4caf50";
+  } else if (q >= 3) {
+    statusIcon = "▲";
+    statusColor = "#2196f3";
+  }
+    return(
     <TouchableOpacity
       onPress={() => openDetail(item)}
       onLongPress={() => deleteCard(item.id)}
@@ -235,7 +270,12 @@ useFocusEffect(
         <View style={styles.cell}><Text style={styles.cellText}>{englishOf(item)}</Text></View>
         <View style={styles.cell}><Text style={styles.cellText}>{item.phonetic || ''}</Text></View>
         <View style={styles.cell}><Text style={styles.cellText}>{japaneseOf(item)}</Text></View>
-        <View style={styles.cell}><Text style={styles.cellText}>{Number(item.known) === 1 ? '✓' : '✗'}</Text></View>
+        <View style={[styles.cell, { alignItems: 'center' }]}>
+          <View style={[styles.statusIconCircle, { borderColor: statusColor }]}>
+            <Text style={{ color: statusColor, fontWeight: 'bold' }}>{statusIcon}
+            </Text>
+          </View>
+        </View>
       </View>
       {item.folder_name ? (
         <View style={styles.folderTagWrap}>
@@ -245,7 +285,8 @@ useFocusEffect(
         </View>
       ) : null}
     </TouchableOpacity>
-  );
+    );
+  };
 
   // ── Folder pill used in both modals ───────────────────────
   const FolderPills = ({ selected, onSelect }) => (
@@ -548,6 +589,23 @@ const styles = StyleSheet.create({
   saveButtonText:  { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   addButton:       { position: 'absolute', bottom: 30, right: 30, width: 54, height: 54, borderRadius: 32, backgroundColor: '#0a7ea4', justifyContent: 'center', alignItems: 'center' },
   addButtonText:   { color: '#fff', fontSize: 38, fontWeight: 'bold', marginTop: -2 },
+  statusIconCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  statusIconText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  cell: {
+    flex: 1, 
+    justifyContent: 'center', 
+    paddingHorizontal: 2,
+  },
 });
-
 
