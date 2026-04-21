@@ -317,12 +317,6 @@ def update_word():
     try:
         data    = request.json
         word_id = data.get("id")
-        quality = data.get("quality")
-        is_known = 1 if quality >= 3 else 0
-        res = supabase.table("words") \
-            .update({
-                "quality": quality,
-                "known": is_known,}) 
         if not word_id:
             return jsonify({"status": "error", "message": "id required"}), 400
         supabase.table("words") \
@@ -383,13 +377,12 @@ def review_word():
     try:
         data    = request.json
         word_id = data.get("id")
-        quality = data.get("quality")   # 0–5
+        quality = data.get("quality")   # 1=Again, 3=Good, 5=Easy
         if word_id is None or quality is None:
             return jsonify({"status": "error", "message": "id and quality required"}), 400
         if not (0 <= int(quality) <= 5):
             return jsonify({"status": "error", "message": "quality must be 0–5"}), 400
 
-        # Fetch current SRS state
         res  = supabase.table("words") \
             .select("repetition, interval, ease_factor") \
             .eq("id", word_id) \
@@ -405,7 +398,7 @@ def review_word():
         ease       = word["ease_factor"] or 2.5
         quality    = int(quality)
 
-        # SM-2 algorithm
+        # SM-2
         if quality < 3:
             repetition = 0
             interval   = 1
@@ -419,7 +412,14 @@ def review_word():
         ease = max(1.3, ease)
 
         next_review = (datetime.now() + timedelta(days=interval)).strftime("%Y-%m-%d")
-        known       = 1 if quality >= 3 else 0
+
+        # 3段階で保存: 0=Again, 1=Good, 2=Easy
+        if quality >= 5:
+            known = 2   # Easy ✔
+        elif quality >= 3:
+            known = 1   # Good ▲
+        else:
+            known = 0   # Again ✖
 
         supabase.table("words") \
             .update({
@@ -428,6 +428,7 @@ def review_word():
                 "repetition":  repetition,
                 "next_review": next_review,
                 "known":       known,
+                "quality":     quality,
             }) \
             .eq("id", word_id) \
             .eq("user_id", request.user_id) \
