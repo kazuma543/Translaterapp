@@ -14,14 +14,17 @@ const FOLDER_COLORS = {
   amber: { bg: "#fff8e1", border: "#ffe082", text: "#f57f17" },
 };
 const LANGUAGES = [
-  { label: "日本語", value: "ja" },
+  { label: "Japanese", value: "ja" },
   { label: "English", value: "en" },
-  { label: "中国語", value: "zh-Hans" }, // 簡体字
-  { label: "ヒンドゥー語", value: "hi" },
-  { label: "インドネシア語", value: "id" },
-  { label: "タイ語", value: "th" },
-  { label: "ベトナム語", value: "vi" },
-  { label: "韓国語", value: "ko" },
+  { label: "Chinese", value: "zh-Hans" }, // 簡体字
+  { label: "Hindi", value: "hi" },
+  { label: "Indonesian", value: "id" },
+  { label: "Thai", value: "th" },
+  { label: "vietnamese", value: "vi" },
+  { label: "Korean", value: "ko" },
+  { label: "Español", value: "es" },
+  { label: "Français", value: "fr" },
+  { label: "Deutsch", value: "de" },
 ];
 export default function TranslateScreen() {
   const [inputText,      setInputText]      = useState('');
