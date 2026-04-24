@@ -114,3 +114,48 @@ export default function App() {
     </GestureHandlerRootView>
   );
 }
+
+{
+  "expo"; {
+    "name"; "TranslateAppFinal",
+    "slug"; "TranslateAppFinal",
+    "version"; "1.0.0",
+    "orientation"; "portrait",
+    "icon"; "./assets/icon.png",
+    "userInterfaceStyle"; "light",
+    "newArchEnabled"; true,
+    "splash"; {
+      "image"; "./assets/splash-icon.png",
+      "resizeMode"; "contain",
+      "backgroundColor"; "#ffffff"
+    }
+    "ios"; {
+      "supportsTablet"; true
+    }
+    "android"; {
+      "adaptiveIcon"; {
+        "foregroundImage"; "./assets/adaptive-icon.png",
+        "backgroundColor"; "#ffffff"
+      }
+      "edgeToEdgeEnabled"; true
+    }
+    "web"; {
+      "favicon"; "./assets/favicon.png"
+    }
+    "plugins"; [
+      "expo-secure-store"
+    ],
+    "extra"; {
+      "eas"; {
+        "projectId"; "1b5394a5-ecb0-470b-a0de-1a7bb0b91ec3"
+      }
+    }
+    "owner"; "skzm",
+    "runtimeVersion"; {
+      "policy"; "sdkVersion"
+    }
+    "updates"; {
+      "url"; "https://u.expo.dev/1b5394a5-ecb0-470b-a0de-1a7bb0b91ec3"
+    }
+  }
+}
